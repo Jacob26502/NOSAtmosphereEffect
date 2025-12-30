@@ -120,8 +120,8 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     }
 
     private fun generateCloudBitmap(source: Bitmap): Bitmap {
-        val cols = 10
-        val rows = 20
+        val cols = 20
+        val rows = 40
 
         val palette = source.scale(cols, rows)
 
