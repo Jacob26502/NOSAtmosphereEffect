@@ -11,8 +11,8 @@ android {
         applicationId = "com.app.nosatmosphereeffect"
         minSdk = 36 // Android 16+
         targetSdk = 36
-        versionCode = 5
-        versionName = "2.0.2"
+        versionCode = 6
+        versionName = "2.0.3"
     }
 
     buildFeatures {
@@ -22,6 +22,16 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
+        }
+
+        getByName("release") {
+            isMinifyEnabled = false
+        }
     }
 
     buildToolsVersion = "35.0.0"
