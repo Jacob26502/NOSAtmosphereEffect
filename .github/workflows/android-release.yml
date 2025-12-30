@@ -50,12 +50,17 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "35.0.0"
 
+      - name: Rename Signed APK
+        run: |
+          # Move the signed file to a clean name
+          mv "${{ steps.sign_app.outputs.signedReleaseFile }}" app/build/outputs/apk/release/app-release.apk
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ env.VERSION_NAME }}
           name: Release v${{ env.VERSION_NAME }}
-          body: ${{ github.event.head_commit.message }}
+          generate_release_notes: true
           draft: false
           prerelease: false
-          files: ${{ steps.sign_app.outputs.signedReleaseFile }}
+          files: app/build/outputs/apk/release/app-release.apk
