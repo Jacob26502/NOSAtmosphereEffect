@@ -1,0 +1,56 @@
+name: Android Release
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Get Version Name from Gradle
+        id: version_info
+        run: |
+          # This grep command finds the line 'versionName "x.y.z"' and extracts x.y.z
+          # Adjust the grep pattern if you use Kotlin DSL (.kts)
+          VERSION_NAME=$(grep "versionName" app/build.gradle | awk -F\" '{print $2}')
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew assembleRelease
+
+      - name: Sign Release APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.VERSION_NAME }}
+          name: Release v${{ env.VERSION_NAME }}
+
+
+          body: ${{ github.event.head_commit.message }}
+
+          draft: false
+          prerelease: false
+          files: ${{ steps.sign_app.outputs.signedReleaseFile }}
