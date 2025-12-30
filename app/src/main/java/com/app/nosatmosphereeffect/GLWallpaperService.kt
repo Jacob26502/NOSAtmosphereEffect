@@ -51,6 +51,7 @@ abstract class GLWallpaperService : WallpaperService() {
 
         inner class WallpaperGLSurfaceView(context: Context) : GLSurfaceView(context) {
             init {
+                setEGLConfigChooser(8, 8, 8, 8, 16, 0)
                 setEGLContextClientVersion(3)
                 preserveEGLContextOnPause = true
             }
