@@ -21,9 +21,9 @@ jobs:
       - name: Get Version Name from Gradle
         id: version_info
         run: |
-          # This grep command finds the line 'versionName "x.y.z"' and extracts x.y.z
-          # Adjust the grep pattern if you use Kotlin DSL (.kts)
-          VERSION_NAME=$(grep "versionName" app/build.gradle | awk -F\" '{print $2}')
+          # UPDATED: Now points to .kts and handles the ' = ' syntax
+          VERSION_NAME=$(grep "versionName =" app/build.gradle.kts | awk -F\" '{print $2}')
+          echo "Version found: $VERSION_NAME"
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
 
       - name: Grant execute permission for gradlew
