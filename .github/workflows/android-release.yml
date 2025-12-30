@@ -41,16 +41,14 @@ jobs:
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
+          buildToolsVersion: "35.0.0"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ env.VERSION_NAME }}
           name: Release v${{ env.VERSION_NAME }}
-
-
           body: ${{ github.event.head_commit.message }}
-
           draft: false
           prerelease: false
           files: ${{ steps.sign_app.outputs.signedReleaseFile }}
