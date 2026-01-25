@@ -79,12 +79,12 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnUpdateDimness"
-        style="@style/Widget.Material3.Button.OutlinedButton"
+        style="@style/Widget.Material3.Button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/update_wallpaper_dimness"
-        android:backgroundTint="?attr/colorPrimary"
-        android:textColor="?attr/colorOnPrimary"/>
+        android:backgroundTint="@color/btn_update_selector"
+        android:textColor="@color/text_update_selector"/>
     </LinearLayout>
 
 </LinearLayout>

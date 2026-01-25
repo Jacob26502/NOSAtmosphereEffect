@@ -7,4 +7,7 @@
     <color name="white_alpha_70">#B3FFFFFF</color>
 
     <color name="seed_red">#D71920</color>
+    <color name="button_inactive">#8E8E8E</color>
+
+
 </resources>

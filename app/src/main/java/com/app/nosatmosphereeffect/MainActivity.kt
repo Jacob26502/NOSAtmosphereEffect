@@ -19,6 +19,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutSettings: LinearLayout
     private lateinit var sliderDimness: Slider
 
+    private lateinit var btnUpdateDimness: Button
+
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             val intent = Intent(this, CropActivity::class.java)
@@ -36,9 +38,13 @@ class MainActivity : AppCompatActivity() {
 
         layoutSettings = findViewById(R.id.layoutSettings)
         sliderDimness = findViewById(R.id.sliderDimness)
+        btnUpdateDimness = findViewById(R.id.btnUpdateDimness)
 
         findViewById<Button>(R.id.btnMainAction).setOnClickListener {
             pickImage.launch("image/*")
+        }
+        sliderDimness.addOnChangeListener { _, value, _ ->
+            updateButtonState(value)
         }
         findViewById<Button>(R.id.btnUpdateDimness).setOnClickListener {
             applyDimnessUpdate()
@@ -57,11 +63,18 @@ class MainActivity : AppCompatActivity() {
             layoutSettings.visibility = View.GONE
         }
     }
+    private fun updateButtonState(sliderValue: Float) {
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val currentSavedLevel = prefs.getFloat("dim_level", 0.2f)
 
+        // Enable button only if the slider value differs from the saved value
+        btnUpdateDimness.isEnabled = sliderValue != currentSavedLevel
+    }
     private fun loadCurrentDimness() {
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
         val currentLevel = prefs.getFloat("dim_level", 0.2f)
         sliderDimness.value = currentLevel
+        updateButtonState(currentLevel)
     }
 
     private fun applyDimnessUpdate() {
@@ -77,6 +90,8 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent("com.app.nosatmosphereeffect.UPDATE_CONFIG")
         intent.setPackage(packageName)
         sendBroadcast(intent)
+
+        btnUpdateDimness.isEnabled = false
 
         Toast.makeText(this, "Wallpaper Updated!", Toast.LENGTH_SHORT).show()
     }
