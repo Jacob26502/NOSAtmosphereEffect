@@ -9,6 +9,7 @@ uniform sampler2D uTextureBlur;
 uniform float uBlurStrength;
 uniform float uSeed;
 uniform float uIsSamsung;
+uniform float uDimLevel;
 
 // Rotate UVs around a center point
 vec2 rotate(vec2 uv, float angle) {
@@ -81,7 +82,7 @@ void main() {
         result = cloudColor.rgb;
     }
 
-    float darken = smoothstep(0.0, 1.0, t) * 0.2;
+    float darken = smoothstep(0.0, 1.0, t) * uDimLevel;
     result *= (1.0 - darken);
 
     fragColor = vec4(result, 1.0);

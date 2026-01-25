@@ -30,6 +30,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     var blurStrength: Float = 0.0f
     var seed: Float = 0.0f
     var isSamsung: Boolean = false
+    @Volatile var dimLevel: Float = 0.2f
     @Volatile private var needsReload: Boolean = false
 
     private var programId: Int = 0
@@ -195,6 +196,8 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uBlurStrength"), blurStrength)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uSeed"), seed)
+
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uDimLevel"), dimLevel)
 
         val samsungFloat = if (isSamsung) 1.0f else 0.0f
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uIsSamsung"), samsungFloat)

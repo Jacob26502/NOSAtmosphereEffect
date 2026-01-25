@@ -189,13 +189,15 @@ class CropActivity : AppCompatActivity() {
             e.printStackTrace()
             val intent = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)
             startActivity(intent)
+        } finally {
+            finish()
         }
     }
 
     private fun goHome() {
-        val home = Intent(Intent.ACTION_MAIN)
-        home.addCategory(Intent.CATEGORY_HOME)
-        home.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        startActivity(home)
+        val intent = Intent(this, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        startActivity(intent)
+        finish()
     }
 }

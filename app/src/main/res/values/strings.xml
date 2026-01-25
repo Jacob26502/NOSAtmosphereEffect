@@ -7,5 +7,7 @@
     <string name="action_select_image">Select Image</string>
     <string name="action_apply">Apply</string>
     <string name="image_alignment_instructions">Pinch to zoom and drag to adjust</string>
+    <string name="dimness_level">Dimness Level</string>
+    <string name="update_wallpaper_dimness">Update Wallpaper Dimness</string>
 
 </resources>

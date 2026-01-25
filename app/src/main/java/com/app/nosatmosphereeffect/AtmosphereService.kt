@@ -47,6 +47,10 @@ class AtmosphereService : GLWallpaperService() {
                         myRenderer?.reloadTexture()
                         requestRender()
                     }
+                    "com.app.nosatmosphereeffect.UPDATE_CONFIG" -> {
+                        updateRendererConfig()
+                        requestRender()
+                    }
                 }
             }
         }
@@ -58,6 +62,7 @@ class AtmosphereService : GLWallpaperService() {
             if (r is AtmosphereRenderer) {
                 myRenderer = r
                 myRenderer?.isSamsung = isSamsungDevice
+                updateRendererConfig()
                 setRenderer(myRenderer!!)
             }
 
@@ -65,6 +70,7 @@ class AtmosphereService : GLWallpaperService() {
             filter.addAction(Intent.ACTION_SCREEN_OFF)
             filter.addAction(Intent.ACTION_USER_PRESENT)
             filter.addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
+            filter.addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
 
             registerReceiver(systemEventReceiver, filter, Context.RECEIVER_EXPORTED)
         }
@@ -124,6 +130,12 @@ class AtmosphereService : GLWallpaperService() {
             blurAnimator?.cancel()
             targetRenderer.blurStrength = if (isSamsungDevice) 0.4f else 0.0f
             requestRender()
+        }
+
+        private fun updateRendererConfig() {
+            val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            val dim = prefs.getFloat("dim_level", 0.2f)
+            myRenderer?.dimLevel = dim
         }
     }
 }
