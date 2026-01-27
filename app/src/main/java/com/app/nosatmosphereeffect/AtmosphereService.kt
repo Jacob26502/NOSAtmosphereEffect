@@ -1,6 +1,7 @@
 package com.app.nosatmosphereeffect
 
 import android.animation.ValueAnimator
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -24,7 +25,7 @@ class AtmosphereService : GLWallpaperService() {
 
         private var myRenderer: AtmosphereRenderer? = null
         private var blurAnimator: ValueAnimator? = null
-        private var isLocked = true
+        private var isLocked: Boolean = true
         private val isSamsungDevice: Boolean
             get() {
                 val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
@@ -58,6 +59,9 @@ class AtmosphereService : GLWallpaperService() {
         override fun onCreate(surfaceHolder: android.view.SurfaceHolder) {
             super.onCreate(surfaceHolder)
 
+            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+            isLocked = keyguardManager.isKeyguardLocked
+
             val r = getRenderer()
             if (r is AtmosphereRenderer) {
                 myRenderer = r
@@ -85,6 +89,10 @@ class AtmosphereService : GLWallpaperService() {
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
             if (visible) {
+                val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                if (!keyguardManager.isKeyguardLocked) {
+                    isLocked = false
+                }
                 if (isLocked) {
                     myRenderer?.blurStrength = 0.0f
                     requestRender()
@@ -103,10 +111,7 @@ class AtmosphereService : GLWallpaperService() {
 
             blurAnimator = ValueAnimator.ofFloat(0.0f, 1.0f).apply {
                 duration = 2500 // 2.5 Seconds total
-
-                // LINEAR: We let the Shader handle the "Wait -> Blur -> Move" timing logic
                 interpolator = LinearInterpolator()
-
                 addUpdateListener { animator ->
                     val value = animator.animatedValue as Float
                     targetRenderer.blurStrength = value
