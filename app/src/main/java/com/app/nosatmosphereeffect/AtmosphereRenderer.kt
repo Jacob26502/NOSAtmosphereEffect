@@ -14,34 +14,69 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
-import java.util.ArrayList
-import java.util.Random
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.max
 import kotlin.math.min
-import androidx.core.graphics.get
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.scale
 import kotlin.math.abs
+import kotlin.math.hypot
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.cos
+import androidx.core.graphics.createBitmap
+import java.util.Random
 
 class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
+    // --- PROPERTY TRIGGER ---
     var blurStrength: Float = 0.0f
-    var seed: Float = 0.0f
+        set(value) {
+            // Trigger randomization for the NEXT unlock when screen turns off (0.0)
+            if (value == 0.0f && field != 0.0f) {
+                reRollTargets()
+            }
+            field = value
+        }
+
     var isSamsung: Boolean = false
     @Volatile var dimLevel: Float = 0.2f
     @Volatile private var needsReload: Boolean = false
 
     private var programId: Int = 0
+    private var blurProgramId: Int = 0
     private var sharpTextureId: Int = 0
     private var blurTextureId: Int = 0
+    private var tempTextureId: Int = 0
+    private var fboId: Int = 0
+    private var aspectRatio: Float = 1.0f
+
+    // --- PHYSICS STATE ---
+    data class BlobPhysics(
+        val color: FloatArray,
+        val startX: Float, val startY: Float,
+        var p1x: Float, var p1y: Float,
+        var endX: Float, var endY: Float,
+        var startSize: Float,
+        var endSize: Float,
+        val massScale: Float,
+        var wobblePhase: Float,
+        var wobbleSpeed: Float
+    )
+
+    private val MAX_BLOBS = 16
+    private var blobs = mutableListOf<BlobPhysics>()
+    private val random = Random()
+
+    // Buffers
+    private val blobColorsBuffer = FloatArray(MAX_BLOBS * 3)
+    private val blobPosBuffer = FloatArray(MAX_BLOBS * 2)
+    private val blobSizesBuffer = FloatArray(MAX_BLOBS)
 
     private val vertices = floatArrayOf(
-        -1f, -1f,  0f, 1f,
-        1f, -1f,  1f, 1f,
-        -1f,  1f,  0f, 0f,
-        1f,  1f,  1f, 0f
+        -1f, -1f,  0f, 1f, // Bottom-Left Screen -> UV(0, 1)
+        1f, -1f,  1f, 1f,  // Bottom-Right Screen -> UV(1, 1)
+        -1f,  1f,  0f, 0f, // Top-Left Screen -> UV(0, 0)
+        1f,  1f,  1f, 0f   // Top-Right Screen -> UV(1, 0)
     )
     private lateinit var vertexBuffer: FloatBuffer
 
@@ -60,129 +95,155 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         val fragmentCode = loadShaderFromAssets("shaders/atmosphere.frag")
         programId = createProgram(vertexCode, fragmentCode)
 
+        val blurFragCode = """
+            #version 300 es
+            precision highp float;
+            in vec2 vTexCoord;
+            out vec4 fragColor;
+            uniform sampler2D uTexture;
+            uniform vec2 uDirection;
+            uniform float uRadius;
+            void main() {
+                vec2 texelSize = 1.0 / vec2(textureSize(uTexture, 0));
+                vec3 result = vec3(0.0);
+                float totalWeight = 0.0;
+                for(float i = -uRadius; i <= uRadius; i++) {
+                    vec2 offset = uDirection * i * texelSize;
+                    float weight = 1.0 - abs(i) / uRadius;
+                    result += texture(uTexture, vTexCoord + offset).rgb * weight;
+                    totalWeight += weight;
+                }
+                fragColor = vec4(result / totalWeight, 1.0);
+            }
+        """.trimIndent()
+        blurProgramId = createProgram(vertexCode, blurFragCode)
+
+        val fbo = IntArray(1)
+        GLES30.glGenFramebuffers(1, fbo, 0)
+        fboId = fbo[0]
+
         loadAndApplyTextures()
     }
 
     private fun loadAndApplyTextures() {
         if (sharpTextureId != 0) {
-            val ids = intArrayOf(sharpTextureId, blurTextureId)
-            GLES30.glDeleteTextures(2, ids, 0)
+            val ids = intArrayOf(sharpTextureId, blurTextureId, tempTextureId)
+            GLES30.glDeleteTextures(3, ids, 0)
         }
 
         val sharpBitmap = loadFixedWallpaper()
         sharpTextureId = uploadTexture(sharpBitmap)
+        tempTextureId = createEmptyTexture(sharpBitmap.width, sharpBitmap.height)
+        val blurredTextureId = gpuBlur(sharpTextureId, sharpBitmap.width, sharpBitmap.height, 200f)
+        val blurredBitmap = downloadTexture(blurredTextureId, sharpBitmap.width, sharpBitmap.height)
 
-        val cloudBitmap = generateCloudBitmap(sharpBitmap)
-        blurTextureId = uploadTexture(cloudBitmap)
+        initBaseBlobs(blurredBitmap)
 
+        blurTextureId = blurredTextureId
         sharpBitmap.recycle()
-        cloudBitmap.recycle()
+        blurredBitmap.recycle()
     }
 
-    private fun loadFixedWallpaper(): Bitmap {
-        val file = File(context.filesDir, "wallpaper.jpg")
-        var rawBitmap: Bitmap? = null
-        if (file.exists()) {
-            try {
-                rawBitmap = BitmapFactory.decodeFile(file.absolutePath)
-            } catch (e: Exception) {
-                e.printStackTrace()
+    // --- BLOB INITIALIZATION ---
+    private fun initBaseBlobs(blurred: Bitmap) {
+        val rawClusters = extractColorsFromBlurred(blurred, 16)
+        blobs.clear()
+
+        data class TempCluster(
+            var r: Int, var g: Int, var b: Int,
+            var x: Float, var y: Float,
+            var count: Int
+        )
+
+        val tempClusters = rawClusters.map {
+            TempCluster(Color.red(it.color), Color.green(it.color), Color.blue(it.color), it.centerX, it.centerY, 1)
+        }.toMutableList()
+
+        val mergedClusters = mutableListOf<TempCluster>()
+        val processed = BooleanArray(tempClusters.size)
+
+        // Merging Pass (Combine neighbors of similar color)
+        for (i in tempClusters.indices) {
+            if (processed[i]) continue
+            val main = tempClusters[i]
+            processed[i] = true
+
+            for (j in i + 1 until tempClusters.size) {
+                if (processed[j]) continue
+                val other = tempClusters[j]
+
+                val colorDist = hypot((main.r - other.r).toFloat(), (main.g - other.g).toFloat()) + abs(main.b - other.b)
+                val spatialDist = hypot(main.x - other.x, main.y - other.y)
+
+                if (colorDist < 40.0f && spatialDist < 0.25f) {
+                    val totalCount = main.count + other.count
+                    main.x = (main.x * main.count + other.x * other.count) / totalCount
+                    main.y = (main.y * main.count + other.y * other.count) / totalCount
+                    main.r = (main.r * main.count + other.r * other.count) / totalCount
+                    main.g = (main.g * main.count + other.g * other.count) / totalCount
+                    main.b = (main.b * main.count + other.b * other.count) / totalCount
+                    main.count += other.count
+                    processed[j] = true
+                }
             }
+            mergedClusters.add(main)
         }
 
-        if (rawBitmap == null) {
-            val color = Color.BLUE
-            rawBitmap = createBitmap(1080, 1920)
-            rawBitmap.eraseColor(color)
+        for (cluster in mergedClusters) {
+            val clr = floatArrayOf(cluster.r / 255f, cluster.g / 255f, cluster.b / 255f)
+
+            // Reduced Mass Scale: Cap at 1.4x
+            val massScale = min(1.4f, 1.0f + (cluster.count * 0.05f))
+
+            // FIX: REMOVED "1.0f - y" flip.
+            // Using direct coordinate since GL texture coordinates align with Bitmap.
+            val correctedY = cluster.y
+
+            blobs.add(BlobPhysics(
+                color = clr,
+                startX = cluster.x, startY = correctedY,
+                p1x = 0f, p1y = 0f, endX = 0f, endY = 0f,
+                startSize = 0f, endSize = 0f,
+                massScale = massScale,
+                wobblePhase = 0f, wobbleSpeed = 0f
+            ))
         }
 
-        val metrics = context.resources.displayMetrics
-        val screenWidth = metrics.widthPixels
-        val screenHeight = metrics.heightPixels
-        val width = rawBitmap.width
-        val height = rawBitmap.height
-
-        val targetW = screenWidth.coerceAtMost(1440)
-        val targetH = (targetW.toFloat() / screenWidth * screenHeight).toInt()
-
-        val finalBitmap = createBitmap(targetW, targetH)
-        val canvas = Canvas(finalBitmap)
-        val matrix = Matrix()
-
-        val safeScale = max(targetW.toFloat() / width, targetH.toFloat() / height)
-        matrix.postScale(safeScale, safeScale)
-        matrix.postTranslate((targetW - width * safeScale) / 2f, (targetH - height * safeScale) / 2f)
-
-        val paint = Paint(Paint.FILTER_BITMAP_FLAG)
-        canvas.drawBitmap(rawBitmap, matrix, paint)
-
-        if (rawBitmap != finalBitmap) rawBitmap.recycle()
-        return finalBitmap
+        reRollTargets()
     }
 
-    private fun generateCloudBitmap(source: Bitmap): Bitmap {
-        val cols = 20
-        val rows = 40
+    private fun reRollTargets() {
+        for (blob in blobs) {
+            // MOVEMENT CONSTRAINT:
+            // Wander within +/- 0.25 of origin.
+            val driftX = (random.nextFloat() - 0.5f) * 0.5f
+            val driftY = (random.nextFloat() - 0.5f) * 0.5f
 
-        val palette = source.scale(cols, rows)
+            blob.endX = (blob.startX + driftX).coerceIn(0.1f, 0.9f)
+            blob.endY = (blob.startY + driftY).coerceIn(0.1f, 0.9f)
 
-        val texW = 512
-        val texH = 512
-        val cloudBitmap = createBitmap(texW, texH)
-        val canvas = Canvas(cloudBitmap)
+            // Curve Control Point
+            val midX = (blob.startX + blob.endX) / 2f
+            val midY = (blob.startY + blob.endY) / 2f
+            blob.p1x = midX + (random.nextFloat() - 0.5f) * 0.5f
+            blob.p1y = midY + (random.nextFloat() - 0.5f) * 0.5f
 
-        // Base background color
-        canvas.drawColor(palette[cols / 2, rows / 2])
+            // Reduced Base Size (0.12 to 0.20 max)
+            val baseSize = 0.12f + random.nextFloat() * 0.08f
+            val finalTargetSize = baseSize * blob.massScale
 
-        val paint = Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.FILL
+            // Animation: Grow from 0.0 to Final Size
+            blob.startSize = 0.0f
+            blob.endSize = finalTargetSize
+
+            blob.wobblePhase = random.nextFloat() * 10f
+            blob.wobbleSpeed = 2.0f + random.nextFloat() * 4.0f
         }
-
-        val cellW = texW / cols.toFloat()
-        val cellH = texH / rows.toFloat()
-
-        val rng = Random()
-        data class Zone(val color: Int, val cx: Float, val cy: Float)
-        val zones = ArrayList<Zone>()
-
-        for (y in 0 until rows) {
-            for (x in 0 until cols) {
-                val color = palette[x, y]
-                val cx = (x * cellW) + (cellW / 2)
-                val cy = (y * cellH) + (cellH / 2)
-                zones.add(Zone(color, cx, cy))
-            }
-        }
-        palette.recycle()
-        zones.shuffle()
-
-        for (zone in zones) {
-            paint.color = zone.color
-
-            // LAYER 1: Main Cloud (Massive Jitter)
-            // Drifts up to 3 cells away. Large size.
-            val shiftX = (rng.nextFloat() - 0.5f) * cellW * 3.0f
-            val shiftY = (rng.nextFloat() - 0.5f) * cellH * 3.0f
-            val radius = max(cellW, cellH) * (1.5f + rng.nextFloat() * 2.0f)
-
-            canvas.drawCircle(zone.cx + shiftX, zone.cy + shiftY, radius, paint)
-
-            // LAYER 2: Satellite Cloud (The "Mortar")
-            // This fills the gaps that might open up when the main clouds move.
-            // It has the SAME color but a different random position nearby.
-            val satShiftX = (rng.nextFloat() - 0.5f) * cellW * 4.0f // Drifts even further
-            val satShiftY = (rng.nextFloat() - 0.5f) * cellH * 4.0f
-            val satRadius = radius * 0.6f // Smaller
-
-            canvas.drawCircle(zone.cx + satShiftX, zone.cy + satShiftY, satRadius, paint)
-        }
-
-        return fastBlur(cloudBitmap, if (rng.nextInt() % 2 == 0) 50 else 70)
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES30.glViewport(0, 0, width, height)
+        aspectRatio = width.toFloat() / height.toFloat()
     }
 
     override fun onDrawFrame(gl: GL10?) {
@@ -194,13 +255,57 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
         GLES30.glUseProgram(programId)
 
+        val t = blurStrength.coerceIn(0f, 1f)
+        val physicsRaw = (t - 0.3f) / 0.7f
+        val physicsT = physicsRaw.coerceIn(0f, 1f)
+        val progress = 1.0f - (1.0f - physicsT).pow(3)
+
+        var idx = 0
+        val time = System.currentTimeMillis() / 1000f
+
+        for (b in blobs) {
+            if (idx >= MAX_BLOBS) break
+
+            val u = 1.0f - progress
+            val tt = progress * progress
+            val uu = u * u
+            val ut2 = 2 * u * progress
+
+            var bx = (uu * b.startX) + (ut2 * b.p1x) + (tt * b.endX)
+            var by = (uu * b.startY) + (ut2 * b.p1y) + (tt * b.endY)
+
+            // Position Wobble (Movement)
+            if (physicsT > 0.0f) {
+                val wobbleStrength = 0.01f * (1.0f - progress)
+                bx += sin(time * b.wobbleSpeed + b.wobblePhase) * wobbleStrength
+                by += cos(time * b.wobbleSpeed + b.wobblePhase) * wobbleStrength
+            }
+
+            // Size Growth
+            val bSize = b.startSize + (b.endSize - b.startSize) * progress
+
+            blobPosBuffer[idx * 2] = bx
+            blobPosBuffer[idx * 2 + 1] = by
+            blobSizesBuffer[idx] = bSize
+
+            blobColorsBuffer[idx * 3] = b.color[0]
+            blobColorsBuffer[idx * 3 + 1] = b.color[1]
+            blobColorsBuffer[idx * 3 + 2] = b.color[2]
+
+            idx++
+        }
+
+        if (idx > 0) {
+            GLES30.glUniform3fv(GLES30.glGetUniformLocation(programId, "uBlobColors"), idx, blobColorsBuffer, 0)
+            GLES30.glUniform2fv(GLES30.glGetUniformLocation(programId, "uBlobPositions"), idx, blobPosBuffer, 0)
+            GLES30.glUniform1fv(GLES30.glGetUniformLocation(programId, "uBlobSizes"), idx, blobSizesBuffer, 0)
+        }
+
+        GLES30.glUniform1i(GLES30.glGetUniformLocation(programId, "uBlobCount"), idx)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uAspectRatio"), aspectRatio)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uBlurStrength"), blurStrength)
-        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uSeed"), seed)
-
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uDimLevel"), dimLevel)
-
-        val samsungFloat = if (isSamsung) 1.0f else 0.0f
-        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uIsSamsung"), samsungFloat)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uIsSamsung"), if (isSamsung) 1.0f else 0.0f)
 
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, sharpTextureId)
@@ -212,18 +317,65 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
         val aPosLoc = GLES30.glGetAttribLocation(programId, "aPosition")
         val aTexLoc = GLES30.glGetAttribLocation(programId, "aTexCoord")
+        drawQuad(aPosLoc, aTexLoc)
+    }
 
+    // --- HELPERS ---
+    private fun createEmptyTexture(width: Int, height: Int): Int {
+        val t = IntArray(1); GLES30.glGenTextures(1, t, 0)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, t[0])
+        GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_RGBA, width, height, 0, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, null)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+        return t[0]
+    }
+
+    private fun gpuBlur(inputTexture: Int, width: Int, height: Int, radius: Float): Int {
+        val outputTexture = createEmptyTexture(width, height)
+        GLES30.glUseProgram(blurProgramId)
+        val aPosLoc = GLES30.glGetAttribLocation(blurProgramId, "aPosition")
+        val aTexLoc = GLES30.glGetAttribLocation(blurProgramId, "aTexCoord")
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, fboId)
+        GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, tempTextureId, 0)
+        GLES30.glViewport(0, 0, width, height)
+        GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTexture)
+        GLES30.glUniform1i(GLES30.glGetUniformLocation(blurProgramId, "uTexture"), 0)
+        GLES30.glUniform2f(GLES30.glGetUniformLocation(blurProgramId, "uDirection"), 1f, 0f)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(blurProgramId, "uRadius"), radius)
+        drawQuad(aPosLoc, aTexLoc)
+        GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, outputTexture, 0)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, tempTextureId)
+        GLES30.glUniform2f(GLES30.glGetUniformLocation(blurProgramId, "uDirection"), 0f, 1f)
+        drawQuad(aPosLoc, aTexLoc)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+        return outputTexture
+    }
+
+    private fun drawQuad(aPosLoc: Int, aTexLoc: Int) {
         vertexBuffer.position(0)
         GLES30.glVertexAttribPointer(aPosLoc, 2, GLES30.GL_FLOAT, false, 4 * 4, vertexBuffer)
         GLES30.glEnableVertexAttribArray(aPosLoc)
         vertexBuffer.position(2)
         GLES30.glVertexAttribPointer(aTexLoc, 2, GLES30.GL_FLOAT, false, 4 * 4, vertexBuffer)
         GLES30.glEnableVertexAttribArray(aTexLoc)
-
         GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, 4)
-
         GLES30.glDisableVertexAttribArray(aPosLoc)
         GLES30.glDisableVertexAttribArray(aTexLoc)
+    }
+
+    private fun downloadTexture(textureId: Int, width: Int, height: Int): Bitmap {
+        val buffer = ByteBuffer.allocateDirect(width * height * 4)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, fboId)
+        GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, textureId, 0)
+        GLES30.glReadPixels(0, 0, width, height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+        val bitmap = createBitmap(width, height)
+        buffer.rewind()
+        bitmap.copyPixelsFromBuffer(buffer)
+        return bitmap
     }
 
     private fun uploadTexture(bitmap: Bitmap): Int {
@@ -259,101 +411,85 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         return context.assets.open(path).bufferedReader().use { it.readText() }
     }
 
-    private fun fastBlur(sentBitmap: Bitmap, radius: Int): Bitmap {
-        val config = sentBitmap.config ?: Bitmap.Config.ARGB_8888
-        val bitmap = sentBitmap.copy(config, true)
-        if (radius < 1) return (null) ?: sentBitmap
-        val w = bitmap.width
-        val h = bitmap.height
-        val pix = IntArray(w * h)
-        bitmap.getPixels(pix, 0, w, 0, 0, w, h)
-        val wm = w - 1
-        val hm = h - 1
-        val wh = w * h
-        val div = radius + radius + 1
-        val r = IntArray(wh)
-        val g = IntArray(wh)
-        val b = IntArray(wh)
-        var rsum: Int; var gsum: Int; var bsum: Int
-        var p: Int; var yp: Int; var yi: Int
-        val vmin = IntArray(max(w, h))
-        var divsum = (div + 1) shr 1
-        divsum *= divsum
-        val dv = IntArray(256 * divsum)
-        for (i in 0 until 256 * divsum) dv[i] = (i / divsum)
-        var yw = 0; yi = 0
-        val stack = Array(div) { IntArray(3) }
-        var stackpointer: Int; var stackstart: Int; var sir: IntArray; var rbs: Int; val r1 = radius + 1; var routsum: Int; var goutsum: Int; var boutsum: Int; var rinsum: Int; var ginsum: Int; var binsum: Int
-        for (y in 0 until h) {
-            rinsum = 0; ginsum = 0; binsum = 0; routsum = 0; goutsum = 0; boutsum = 0; rsum = 0; gsum = 0; bsum = 0
-            for (i in -radius..radius) {
-                p = pix[yi + min(wm, max(i, 0))]
-                sir = stack[i + radius]
-                sir[0] = (p and 0xff0000) shr 16
-                sir[1] = (p and 0x00ff00) shr 8
-                sir[2] = (p and 0x0000ff)
-                rbs = r1 - abs(i)
-                rsum += sir[0] * rbs
-                gsum += sir[1] * rbs
-                bsum += sir[2] * rbs
-                if (i > 0) { rinsum += sir[0]; ginsum += sir[1]; binsum += sir[2] }
-                else { routsum += sir[0]; goutsum += sir[1]; boutsum += sir[2] }
-            }
-            stackpointer = radius
-            for (x in 0 until w) {
-                r[yi] = dv[rsum]; g[yi] = dv[gsum]; b[yi] = dv[bsum]
-                rsum -= routsum; gsum -= goutsum; bsum -= boutsum
-                stackstart = stackpointer - radius + div
-                sir = stack[stackstart % div]
-                routsum -= sir[0]; goutsum -= sir[1]; boutsum -= sir[2]
-                if (y == 0) vmin[x] = min(x + radius + 1, wm)
-                p = pix[yw + vmin[x]]
-                sir[0] = (p and 0xff0000) shr 16; sir[1] = (p and 0x00ff00) shr 8; sir[2] = (p and 0x0000ff)
-                rinsum += sir[0]; ginsum += sir[1]; binsum += sir[2]
-                rsum += rinsum; gsum += ginsum; bsum += binsum
-                stackpointer = (stackpointer + 1) % div
-                sir = stack[(stackpointer) % div]
-                routsum += sir[0]; goutsum += sir[1]; boutsum += sir[2]
-                rinsum -= sir[0]; ginsum -= sir[1]; binsum -= sir[2]
-                yi++
-            }
-            yw += w
+    private fun loadFixedWallpaper(): Bitmap {
+        val file = File(context.filesDir, "wallpaper.jpg")
+        var rawBitmap: Bitmap? = null
+        if (file.exists()) {
+            try { rawBitmap = BitmapFactory.decodeFile(file.absolutePath) } catch (e: Exception) { e.printStackTrace() }
         }
-        for (x in 0 until w) {
-            rinsum = 0; ginsum = 0; binsum = 0; routsum = 0; goutsum = 0; boutsum = 0; rsum = 0; gsum = 0; bsum = 0
-            yp = -radius * w
-            for (i in -radius..radius) {
-                yi = max(0, yp) + x
-                sir = stack[i + radius]
-                sir[0] = r[yi]; sir[1] = g[yi]; sir[2] = b[yi]
-                rbs = r1 - abs(i)
-                rsum += r[yi] * rbs
-                gsum += g[yi] * rbs
-                bsum += b[yi] * rbs
-                if (i > 0) { rinsum += sir[0]; ginsum += sir[1]; binsum += sir[2] }
-                else { routsum += sir[0]; goutsum += sir[1]; boutsum += sir[2] }
-                if (i < hm) yp += w
-            }
-            yi = x; stackpointer = radius
-            for (y in 0 until h) {
-                pix[yi] = (0xff000000.toInt() or (dv[rsum] shl 16) or (dv[gsum] shl 8) or dv[bsum])
-                rsum -= routsum; gsum -= goutsum; bsum -= boutsum
-                stackstart = stackpointer - radius + div
-                sir = stack[stackstart % div]
-                routsum -= sir[0]; goutsum -= sir[1]; boutsum -= sir[2]
-                if (x == 0) vmin[y] = min(y + r1, hm) * w
-                p = x + vmin[y]
-                sir[0] = r[p]; sir[1] = g[p]; sir[2] = b[p]
-                rinsum += sir[0]; ginsum += sir[1]; binsum += sir[2]
-                rsum += rinsum; gsum += ginsum; bsum += binsum
-                stackpointer = (stackpointer + 1) % div
-                sir = stack[stackpointer]
-                routsum += sir[0]; goutsum += sir[1]; boutsum += sir[2]
-                rinsum -= sir[0]; ginsum -= sir[1]; binsum -= sir[2]
-                yi += w
+        if (rawBitmap == null) {
+            val color = Color.BLUE
+            rawBitmap = createBitmap(1080, 1920)
+            rawBitmap.eraseColor(color)
+        }
+        val metrics = context.resources.displayMetrics
+        val screenWidth = metrics.widthPixels
+        val screenHeight = metrics.heightPixels
+        val width = rawBitmap.width
+        val height = rawBitmap.height
+        val targetW = screenWidth.coerceAtMost(1440)
+        val targetH = (targetW.toFloat() / screenWidth * screenHeight).toInt()
+        val finalBitmap = createBitmap(targetW, targetH)
+        val canvas = Canvas(finalBitmap)
+        val matrix = Matrix()
+        val safeScale = max(targetW.toFloat() / width, targetH.toFloat() / height)
+        matrix.postScale(safeScale, safeScale)
+        matrix.postTranslate((targetW - width * safeScale) / 2f, (targetH - height * safeScale) / 2f)
+        val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+        canvas.drawBitmap(rawBitmap, matrix, paint)
+        if (rawBitmap != finalBitmap) rawBitmap.recycle()
+        return finalBitmap
+    }
+
+    data class ColorCluster(val color: Int, val centerX: Float, val centerY: Float)
+    data class ColorPoint(val color: Int, val x: Int, val y: Int)
+
+    private fun extractColorsFromBlurred(blurred: Bitmap, targetColors: Int = 12): List<ColorCluster> {
+        val w = blurred.width; val h = blurred.height
+        val samples = mutableListOf<ColorPoint>()
+        val step = 10
+        for (y in 0 until h step step) {
+            for (x in 0 until w step step) {
+                samples.add(ColorPoint(blurred.getPixel(x, y), x, y))
             }
         }
-        bitmap.setPixels(pix, 0, w, 0, 0, w, h)
-        return bitmap
+        val colorBuckets = medianCut(samples, targetColors)
+        val colorClusters = mutableListOf<ColorCluster>()
+        for (bucket in colorBuckets) {
+            if (bucket.isEmpty()) continue
+            var sumR = 0L; var sumG = 0L; var sumB = 0L; var sumX = 0f; var sumY = 0f
+            for (point in bucket) {
+                sumR += Color.red(point.color); sumG += Color.green(point.color); sumB += Color.blue(point.color)
+                sumX += point.x; sumY += point.y
+            }
+            val count = bucket.size
+            val avgColor = Color.rgb((sumR/count).toInt(), (sumG/count).toInt(), (sumB/count).toInt())
+            colorClusters.add(ColorCluster(avgColor, sumX/count/w, sumY/count/h))
+        }
+        return colorClusters
+    }
+
+    private fun medianCut(pixels: List<ColorPoint>, targetBuckets: Int): List<List<ColorPoint>> {
+        val buckets = mutableListOf<MutableList<ColorPoint>>()
+        buckets.add(pixels.toMutableList())
+        while (buckets.size < targetBuckets) {
+            var largestBucket: MutableList<ColorPoint>? = null; var largestRange = 0; var splitChannel = 0
+            for (bucket in buckets) {
+                if (bucket.size <= 1) continue
+                val reds = bucket.map { Color.red(it.color) }; val greens = bucket.map { Color.green(it.color) }; val blues = bucket.map { Color.blue(it.color) }
+                val rRange = (reds.maxOrNull()?:0) - (reds.minOrNull()?:0)
+                val gRange = (greens.maxOrNull()?:0) - (greens.minOrNull()?:0)
+                val bRange = (blues.maxOrNull()?:0) - (blues.minOrNull()?:0)
+                val maxRange = maxOf(rRange, gRange, bRange)
+                if (maxRange > largestRange) { largestRange = maxRange; largestBucket = bucket; splitChannel = if(maxRange==rRange) 0 else if(maxRange==gRange) 1 else 2 }
+            }
+            if (largestBucket == null) break
+            val sorted = when(splitChannel) { 0 -> largestBucket.sortedBy { Color.red(it.color) }; 1 -> largestBucket.sortedBy { Color.green(it.color) }; else -> largestBucket.sortedBy { Color.blue(it.color) } }
+            val median = sorted.size / 2
+            buckets.remove(largestBucket)
+            buckets.add(sorted.subList(0, median).toMutableList())
+            buckets.add(sorted.subList(median, sorted.size).toMutableList())
+        }
+        return buckets
     }
 }

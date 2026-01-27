@@ -86,7 +86,7 @@ class AtmosphereService : GLWallpaperService() {
             super.onVisibilityChanged(visible)
             if (visible) {
                 if (isLocked) {
-                    myRenderer?.blurStrength = if (isSamsungDevice) 0.4f else 0.0f
+                    myRenderer?.blurStrength = 0.0f
                     requestRender()
                 } else {
                     snapToHomeState()
@@ -96,8 +96,6 @@ class AtmosphereService : GLWallpaperService() {
 
         private fun playUnlockAnimation() {
             val targetRenderer = myRenderer ?: return
-
-            targetRenderer.seed = (Math.random() * 1000.0).toFloat()
 
             blurAnimator?.cancel()
             targetRenderer.blurStrength = 0.0f
@@ -128,7 +126,7 @@ class AtmosphereService : GLWallpaperService() {
         private fun prepareForNextUnlock() {
             val targetRenderer = myRenderer ?: return
             blurAnimator?.cancel()
-            targetRenderer.blurStrength = if (isSamsungDevice) 0.4f else 0.0f
+            targetRenderer.blurStrength = 0.0f
             requestRender()
         }
 

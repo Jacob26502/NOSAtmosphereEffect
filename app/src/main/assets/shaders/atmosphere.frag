@@ -6,85 +6,81 @@ out vec4 fragColor;
 
 uniform sampler2D uTextureSharp;
 uniform sampler2D uTextureBlur;
+
+#define MAX_BLOBS 16
+uniform vec3 uBlobColors[MAX_BLOBS];
+uniform vec2 uBlobPositions[MAX_BLOBS];
+uniform float uBlobSizes[MAX_BLOBS];
+uniform int uBlobCount;
+uniform float uAspectRatio;
+
 uniform float uBlurStrength;
-uniform float uSeed;
-uniform float uIsSamsung;
 uniform float uDimLevel;
 
-// Rotate UVs around a center point
-vec2 rotate(vec2 uv, float angle) {
-    vec2 center = vec2(0.5);
-    uv -= center;
-    float s = sin(angle);
-    float c = cos(angle);
-    mat2 rot = mat2(c, -s, s, c);
-    return (uv * rot) + center;
-}
-
-// Cubic Ease Out: Fast Start -> Slow Stop
-float easeOutCubic(float x) {
-    return 1.0 - pow(1.0 - x, 3.0);
+// Simple pseudo-random function for noise
+float rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
 void main() {
     float t = uBlurStrength;
 
-    // --- TIMING SEQUENCE ---
-    float blurMix;
-    float moveRaw;
+    // --- 1. Background ---
+    float blurPhase = smoothstep(0.0, 0.3, t);
+    vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
+    vec3 blur = texture(uTextureBlur, vTexCoord).rgb;
+    vec3 finalColor = mix(sharp, blur, blurPhase);
 
-    // Check if Samsung (passed from Kotlin as 1.0 or 0.0)
-    if (uIsSamsung > 0.5) {
-        // 1. Blur Phase (0.0 to 0.11)
-        blurMix = smoothstep(0.0, 0.11, t);
-        // 2. Movement Phase (0.09 to 1.0) [Delayed start]
-        moveRaw = smoothstep(0.09, 1.0, t);
+    // --- 2. Blob Layering ---
+    // Fade in: 0.3 -> 0.8
+    float globalOpacity = smoothstep(0.3, 0.8, t);
 
-    } else {
-        // 1. Movement Phase (0.00 to 1.0) [Immediate start]
-        moveRaw = smoothstep(0.0, 1.0, t);
+    // Time variable for animating the shape wobble
+    // We use blurStrength as a proxy for time progress if needed,
+    // but ideally we'd pass a uTime uniform.
+    // Here we can use uBlurStrength to drive the distortion phase.
+    float timePhase = t * 10.0;
+
+    if (globalOpacity > 0.01 && uBlobCount > 0) {
+        vec2 uv = vTexCoord;
+        uv.x *= uAspectRatio;
+
+        for(int i = 0; i < MAX_BLOBS; i++) {
+            if (i >= uBlobCount) break;
+
+            vec2 pos = uBlobPositions[i];
+            pos.x *= uAspectRatio;
+
+            // Calculate Angle for shape distortion
+            vec2 delta = uv - pos;
+            float angle = atan(delta.y, delta.x);
+            float dist = length(delta);
+            float radius = uBlobSizes[i];
+
+            // SHAPE DISTORTION:
+            // Add sine waves to the radius based on angle.
+            // This makes it look like an amoeba/liquid rather than a perfect circle.
+            // 3.0, 5.0 are frequencies. timePhase makes it rotate/undulate.
+            float distortion = sin(angle * 3.0 + timePhase + float(i)) * 0.02 +
+            cos(angle * 5.0 - timePhase) * 0.02;
+
+            // Apply distortion to the effective radius check
+            float effectiveRadius = radius + distortion;
+
+            // Smooth border
+            float alpha = smoothstep(effectiveRadius, effectiveRadius * 0.4, dist);
+
+            alpha *= globalOpacity;
+
+            // Layering (No color mixing)
+            if (alpha > 0.0) {
+                finalColor = mix(finalColor, uBlobColors[i], alpha);
+            }
+        }
     }
 
-    // Apply Physics (Deceleration) to the movement
-    float movePhysics = easeOutCubic(moveRaw);
+    // --- 3. Dimming ---
+    finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);
 
-    // --- MOVEMENT LOGIC ---
-
-    // 1. Zoom (Increase Size)
-    // Only zoom during the movement phase
-    float zoom = 1.0 - (movePhysics * 0.4);
-    vec2 center = vec2(0.5);
-    vec2 zoomedUV = (vTexCoord - center) * zoom + center;
-
-    // 2. Circular / Swirl Movement
-    float randomDir = sign(sin(uSeed));
-    float dist = length(vTexCoord - center);
-
-    // Rotate based on Physics Curve
-    float angle = movePhysics * randomDir * (0.5 + dist);
-
-    vec2 cloudUV = rotate(zoomedUV, angle);
-
-    // 3. Random Destination Shift
-    vec2 drift = vec2(sin(uSeed), cos(uSeed)) * movePhysics * 0.3;
-    cloudUV += drift;
-
-    // --- COMPOSITION ---
-
-    vec4 sharpColor = texture(uTextureSharp, vTexCoord);
-    vec4 cloudColor = texture(uTextureBlur, cloudUV);
-
-    // Mix based on the Blur
-    vec3 result;
-    if(uIsSamsung > 0.5){
-        result = mix(sharpColor.rgb, cloudColor.rgb, blurMix);
-    } else {
-        result = cloudColor.rgb;
-    }
-
-    float darken = smoothstep(0.0, 1.0, t) * uDimLevel;
-    result *= (1.0 - darken);
-
-    fragColor = vec4(result, 1.0);
-
+    fragColor = vec4(finalColor, 1.0);
 }
