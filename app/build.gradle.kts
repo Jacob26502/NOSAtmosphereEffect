@@ -44,6 +44,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.androidx.exifinterface)
     // Versions
     val coreKtxVersion = "1.17.0"
     val lifecycleVersion = "2.10.0"

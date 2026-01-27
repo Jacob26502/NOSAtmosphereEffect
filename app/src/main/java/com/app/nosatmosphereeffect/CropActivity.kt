@@ -4,20 +4,25 @@ import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.ContentUris
 import android.content.ContentValues
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.color.DynamicColors
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.color.DynamicColors
 import java.io.File
 import java.io.FileOutputStream
-import androidx.core.net.toUri
+import java.io.InputStream
 
 class CropActivity : AppCompatActivity() {
 
@@ -25,7 +30,6 @@ class CropActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         DynamicColors.applyToActivityIfAvailable(this)
-
         setContentView(R.layout.activity_crop)
 
         val cropView = findViewById<TouchImageView>(R.id.cropImageView)
@@ -36,20 +40,134 @@ class CropActivity : AppCompatActivity() {
         val uriString = intent.getStringExtra("IMAGE_URI") ?: return
         val uri = uriString.toUri()
 
-        try {
-            val inputStream = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-            cropView.setInitialImage(bitmap)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            finish()
-        }
+        // Use a background thread to load heavy images to prevent UI freeze
+        Thread {
+            try {
+                // Load safely with Downsampling + Rotation
+                val correctedBitmap = decodeSampledBitmapFromUri(this, uri, 4096, 4096)
+
+                runOnUiThread {
+                    if (correctedBitmap != null) {
+                        cropView.setInitialImage(correctedBitmap)
+                    } else {
+                        Toast.makeText(this, "Could not load image format.", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+        }.start()
 
         btnSave.setOnClickListener {
-            showApplyDialog(cropView.getCroppedBitmap())
+            val cropped = cropView.getCroppedBitmap()
+            showApplyDialog(cropped)
         }
     }
+
+    // --- ROBUST IMAGE LOADER ---
+    // 1. Checks Image Size first (without loading to memory)
+    // 2. Calculates Scale Factor (to prevent OutOfMemory on 200MP photos)
+    // 3. Decodes & Rotates based on Exif (Supports HEIC, WebP, JPG)
+    private fun decodeSampledBitmapFromUri(context: Context, uri: Uri, reqWidth: Int, reqHeight: Int): Bitmap? {
+        var inputStream: InputStream? = null
+        try {
+            // A. First pass: Decode dimensions only
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            inputStream = context.contentResolver.openInputStream(uri)
+            BitmapFactory.decodeStream(inputStream, null, options)
+            inputStream?.close()
+
+            // B. Calculate inSampleSize (Scale down factor)
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+            options.inJustDecodeBounds = false
+            // Preferred config for high quality but lower memory than HARDWARE
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888
+
+            // C. Decode bitmap with inSampleSize
+            inputStream = context.contentResolver.openInputStream(uri)
+            val rawBitmap = BitmapFactory.decodeStream(inputStream, null, options)
+            inputStream?.close()
+
+            if (rawBitmap == null) return null
+
+            // D. Handle Rotation (HEIC/Samsung often needs this)
+            return handleExifRotation(context, uri, rawBitmap)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        } finally {
+            try { inputStream?.close() } catch (e: Exception) {}
+        }
+    }
+
+    private fun handleExifRotation(context: Context, uri: Uri, bitmap: Bitmap): Bitmap {
+        var inputStream: InputStream? = null
+        try {
+            inputStream = context.contentResolver.openInputStream(uri)
+            if (inputStream == null) return bitmap
+
+            // Use ExifInterface (Supports HEIC on API 28+)
+            val exifInterface = ExifInterface(inputStream)
+            val orientation = exifInterface.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+
+            val rotationInDegrees = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+
+            // If no rotation needed, return original
+            if (rotationInDegrees == 0f) return bitmap
+
+            // Create rotated bitmap
+            val matrix = Matrix()
+            matrix.postRotate(rotationInDegrees)
+            val rotatedBitmap = Bitmap.createBitmap(
+                bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
+            )
+
+            if (rotatedBitmap != bitmap) {
+                bitmap.recycle() // Clean up old memory
+            }
+            return rotatedBitmap
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return bitmap // Return original if Exif fails
+        } finally {
+            inputStream?.close()
+        }
+    }
+
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height: Int, width: Int) = options.run { outHeight to outWidth }
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+
+            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+            // height and width larger than the requested height and width.
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
+    }
+    // --- END LOADER ---
 
     private fun showApplyDialog(bitmap: Bitmap) {
         val options = arrayOf("Set Static Lock Screen", "Save Copy to Gallery")
@@ -71,7 +189,7 @@ class CropActivity : AppCompatActivity() {
                             saveToGallery = checkedItems[1]
                         )
                     }
-                    .setCancelable(false) // Force user to click OK
+                    .setCancelable(false)
                     .show()
             }
             .setNegativeButton("Cancel", null)
@@ -128,21 +246,20 @@ class CropActivity : AppCompatActivity() {
     }
 
     private fun deleteOldBackups() {
-            try {
-                val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-                val projection = arrayOf(MediaStore.Images.Media._ID)
-                val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ? AND ${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
-                val selectionArgs = arrayOf("Atmosphere_%", "%Atmosphere%")
+        try {
+            val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            val projection = arrayOf(MediaStore.Images.Media._ID)
+            val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ? AND ${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+            val selectionArgs = arrayOf("Atmosphere_%", "%Atmosphere%")
 
-                contentResolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
-                    while (cursor.moveToNext()) {
-                        val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
-                        val deleteUri = ContentUris.withAppendedId(collection, id)
-                        contentResolver.delete(deleteUri, null, null)
-                    }
+            contentResolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
+                    val deleteUri = ContentUris.withAppendedId(collection, id)
+                    contentResolver.delete(deleteUri, null, null)
                 }
-            } catch (e: Exception) { e.printStackTrace() }
-
+            }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun saveToPublicGallery(bitmap: Bitmap) {
@@ -151,9 +268,8 @@ class CropActivity : AppCompatActivity() {
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
                 put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Atmosphere")
-                    put(MediaStore.MediaColumns.IS_PENDING, 1)
-
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Atmosphere")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
 
             val resolver = contentResolver
@@ -165,11 +281,9 @@ class CropActivity : AppCompatActivity() {
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
                     }
                 }
-
-                    contentValues.clear()
-                    contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                    resolver.update(uri, contentValues, null, null)
-
+                contentValues.clear()
+                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(uri, contentValues, null, null)
             }
         } catch (e: Exception) { e.printStackTrace() }
     }
