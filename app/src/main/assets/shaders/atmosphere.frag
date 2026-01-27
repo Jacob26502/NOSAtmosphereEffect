@@ -20,14 +20,17 @@ void main() {
     float t = uBlurStrength;
 
     // --- 1. Background (Blur Phase: 0.0 -> 0.2) ---
+    // Background completes its blur at 0.2
     float blurPhase = smoothstep(0.0, 0.2, t);
 
     vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
     vec3 blur = texture(uTextureBlur, vTexCoord).rgb;
     vec3 finalColor = mix(sharp, blur, blurPhase);
 
-    // --- 2. Blob Layering (Appear Phase: 0.2 -> 0.7) ---
-    float globalOpacity = smoothstep(0.2, 0.7, t);
+    // --- 2. Blob Layering (Overlap Phase: 0.1 -> 0.6) ---
+    // NEW: We start fading in the blobs at 0.1.
+    // This creates an overlap where blobs appear BEFORE the background is fully blurred.
+    float globalOpacity = smoothstep(0.1, 0.6, t);
 
     if (globalOpacity > 0.01 && uBlobCount > 0) {
         vec2 uv = vTexCoord;
@@ -43,12 +46,10 @@ void main() {
             float dist = length(delta);
             float radius = uBlobSizes[i];
 
-            // NO WOBBLE / NO DISTORTION
-            // Just a clean, perfect circle radius
+            // Clean circle (No wobble)
             float effectiveRadius = radius;
 
-            // Soft edge (Standard clean circle)
-            // 1.0 - smoothstep ensures the center is 1.0 and edge is 0.0
+            // Soft edge
             float alpha = 1.0 - smoothstep(effectiveRadius * 0.4, effectiveRadius, dist);
 
             alpha *= globalOpacity;

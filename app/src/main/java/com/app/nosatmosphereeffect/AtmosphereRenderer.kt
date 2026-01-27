@@ -23,6 +23,7 @@ import kotlin.math.hypot
 import kotlin.math.pow
 import androidx.core.graphics.createBitmap
 import java.util.Random
+import androidx.core.graphics.get
 
 class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
@@ -46,7 +47,6 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     private var fboId: Int = 0
     private var aspectRatio: Float = 1.0f
 
-    // CLEANED: Removed wobble properties
     data class BlobPhysics(
         val color: FloatArray,
         val startX: Float, val startY: Float,
@@ -233,15 +233,14 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
         val t = blurStrength.coerceIn(0f, 1f)
 
-        // --- TIMING LOGIC ---
-        // 0.0 -> 0.2: Pure Blur (Shader)
-        // 0.2 -> 1.0: Physics Movement
-        val physicsRaw = (t - 0.2f) / 0.8f
+        // --- TIMING LOGIC (With Overlap) ---
+        // Blur Phase: 0.0 -> 0.2
+        // Blob Phase: 0.1 -> 1.0
+
+        val physicsRaw = (t - 0.1f) / 0.9f
         val physicsT = physicsRaw.coerceIn(0f, 1f)
 
         // MOVEMENT CURVE: Fast Start, Slow Settle
-        // cubic Ease-Out: 1 - (1-t)^3
-        // At 50% time, it covers 87.5% distance.
         val progress = 1.0f - (1.0f - physicsT).pow(3)
 
         var idx = 0
@@ -249,7 +248,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         for (b in blobs) {
             if (idx >= MAX_BLOBS) break
 
-            // Standard Cubic Bezier Calculation
+            // Cubic Bezier Movement
             val u = 1.0f - progress
             val tt = progress * progress
             val uu = u * u
@@ -258,9 +257,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
             val bx = (uu * b.startX) + (ut2 * b.p1x) + (tt * b.endX)
             val by = (uu * b.startY) + (ut2 * b.p1y) + (tt * b.endY)
 
-            // NOTE: Removed the "+ sin(time)" jitter.
-            // The position 'bx, by' now moves smoothly along the curve only.
-
+            // Clean movement, no wobble
             val bSize = b.startSize + (b.endSize - b.startSize) * progress
 
             blobPosBuffer[idx * 2] = bx
@@ -428,7 +425,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         val step = 10
         for (y in 0 until h step step) {
             for (x in 0 until w step step) {
-                samples.add(ColorPoint(blurred.getPixel(x, y), x, y))
+                samples.add(ColorPoint(blurred[x, y], x, y))
             }
         }
         val colorBuckets = medianCut(samples, targetColors)
