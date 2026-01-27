@@ -5,11 +5,10 @@ in vec2 vTexCoord;
 out vec4 fragColor;
 
 uniform sampler2D uTextureSharp;
-uniform sampler2D uTextureBlur;
-#define MAX_BLOBS 16
+#define MAX_BLOBS 32
 uniform vec3 uBlobColors[MAX_BLOBS];
 uniform vec2 uBlobPositions[MAX_BLOBS];
-uniform float uBlobSizes[MAX_BLOBS];
+uniform float uBlobSizes[MAX_BLOBS]; // Mass
 uniform int uBlobCount;
 uniform float uAspectRatio;
 
@@ -19,48 +18,45 @@ uniform float uDimLevel;
 void main() {
     float t = uBlurStrength;
 
-    // --- 1. Background (Blur Phase: 0.0 -> 0.2) ---
-    // Background completes its blur at 0.2
-    float blurPhase = smoothstep(0.0, 0.2, t);
+    // --- LIQUID RECONSTRUCTION (Shepard's Method) ---
+    vec3 weightedColorSum = vec3(0.0);
+    float totalWeight = 0.0;
 
-    vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
-    vec3 blur = texture(uTextureBlur, vTexCoord).rgb;
-    vec3 finalColor = mix(sharp, blur, blurPhase);
+    vec2 uv = vTexCoord;
+    uv.x *= uAspectRatio;
 
-    // --- 2. Blob Layering (Overlap Phase: 0.1 -> 0.6) ---
-    // NEW: We start fading in the blobs at 0.1.
-    // This creates an overlap where blobs appear BEFORE the background is fully blurred.
-    float globalOpacity = smoothstep(0.1, 0.6, t);
+    for(int i = 0; i < MAX_BLOBS; i++) {
+        if (i >= uBlobCount) break;
 
-    if (globalOpacity > 0.01 && uBlobCount > 0) {
-        vec2 uv = vTexCoord;
-        uv.x *= uAspectRatio;
+        vec2 blobPos = uBlobPositions[i];
+        blobPos.x *= uAspectRatio;
 
-        for(int i = 0; i < MAX_BLOBS; i++) {
-            if (i >= uBlobCount) break;
+        float dist = length(uv - blobPos);
 
-            vec2 pos = uBlobPositions[i];
-            pos.x *= uAspectRatio;
+        // Weight calculation (1/dist^3)
+        float weight = uBlobSizes[i] / (pow(dist, 3.0) + 0.002);
 
-            vec2 delta = uv - pos;
-            float dist = length(delta);
-            float radius = uBlobSizes[i];
-
-            // Clean circle (No wobble)
-            float effectiveRadius = radius;
-
-            // Soft edge
-            float alpha = 1.0 - smoothstep(effectiveRadius * 0.4, effectiveRadius, dist);
-
-            alpha *= globalOpacity;
-
-            if (alpha > 0.0) {
-                finalColor = mix(finalColor, uBlobColors[i], alpha);
-            }
-        }
+        weightedColorSum += uBlobColors[i] * weight;
+        totalWeight += weight;
     }
 
-    // --- 3. Dimming ---
-    finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);
+    vec3 liquidColor = vec3(0.0);
+    if (totalWeight > 0.0) {
+        liquidColor = weightedColorSum / totalWeight;
+    }
+
+    // --- TIMING LOGIC ---
+    // 0.0 -> 0.2: Fade from Sharp to Liquid (Static Frosted Look)
+    // 0.2 -> 1.0: Liquid moves (Positions updated by Renderer)
+    float morphPhase = smoothstep(0.0, 0.2, t);
+
+    // Dimming applied to background liquid
+    liquidColor = mix(liquidColor, vec3(0.0), uDimLevel * t);
+
+    vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
+
+    // Mix Sharp Photo -> Liquid Field
+    vec3 finalColor = mix(sharp, liquidColor, morphPhase);
+
     fragColor = vec4(finalColor, 1.0);
 }

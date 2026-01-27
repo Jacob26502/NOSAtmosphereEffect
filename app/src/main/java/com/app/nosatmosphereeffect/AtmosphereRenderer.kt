@@ -23,7 +23,6 @@ import kotlin.math.hypot
 import kotlin.math.pow
 import androidx.core.graphics.createBitmap
 import java.util.Random
-import androidx.core.graphics.get
 
 class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
@@ -52,12 +51,11 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         val startX: Float, val startY: Float,
         var p1x: Float, var p1y: Float,
         var endX: Float, var endY: Float,
-        var startSize: Float,
-        var endSize: Float,
+        var mass: Float,
         val massScale: Float
     )
 
-    private val MAX_BLOBS = 16
+    private val MAX_BLOBS = 32
     private var blobs = mutableListOf<BlobPhysics>()
     private val random = Random()
 
@@ -127,6 +125,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         val sharpBitmap = loadFixedWallpaper()
         sharpTextureId = uploadTexture(sharpBitmap)
         tempTextureId = createEmptyTexture(sharpBitmap.width, sharpBitmap.height)
+
         val blurredTextureId = gpuBlur(sharpTextureId, sharpBitmap.width, sharpBitmap.height, 200f)
         val blurredBitmap = downloadTexture(blurredTextureId, sharpBitmap.width, sharpBitmap.height)
 
@@ -138,7 +137,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     }
 
     private fun initBaseBlobs(blurred: Bitmap) {
-        val rawClusters = extractColorsFromBlurred(blurred, 16)
+        val rawClusters = extractColorsFromBlurred(blurred, 32)
         blobs.clear()
 
         data class TempCluster(
@@ -166,7 +165,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
                 val colorDist = hypot((main.r - other.r).toFloat(), (main.g - other.g).toFloat()) + abs(main.b - other.b)
                 val spatialDist = hypot(main.x - other.x, main.y - other.y)
 
-                if (colorDist < 40.0f && spatialDist < 0.25f) {
+                if (colorDist < 70.0f && spatialDist < 0.45f) {
                     val totalCount = main.count + other.count
                     main.x = (main.x * main.count + other.x * other.count) / totalCount
                     main.y = (main.y * main.count + other.y * other.count) / totalCount
@@ -182,13 +181,13 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
         for (cluster in mergedClusters) {
             val clr = floatArrayOf(cluster.r / 255f, cluster.g / 255f, cluster.b / 255f)
-            val massScale = min(1.4f, 1.0f + (cluster.count * 0.05f))
+            val massScale = min(1.5f, 1.0f + (cluster.count * 0.05f))
 
             blobs.add(BlobPhysics(
                 color = clr,
                 startX = cluster.x, startY = cluster.y,
                 p1x = 0f, p1y = 0f, endX = 0f, endY = 0f,
-                startSize = 0f, endSize = 0f,
+                mass = 0f,
                 massScale = massScale
             ))
         }
@@ -198,22 +197,16 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
     private fun reRollTargets() {
         for (blob in blobs) {
-            val driftX = (random.nextFloat() - 0.5f) * 0.5f
-            val driftY = (random.nextFloat() - 0.5f) * 0.5f
-
-            blob.endX = (blob.startX + driftX).coerceIn(0.1f, 0.9f)
-            blob.endY = (blob.startY + driftY).coerceIn(0.1f, 0.9f)
+            blob.endX = 0.05f + random.nextFloat() * 0.9f
+            blob.endY = 0.05f + random.nextFloat() * 0.9f
 
             val midX = (blob.startX + blob.endX) / 2f
             val midY = (blob.startY + blob.endY) / 2f
             blob.p1x = midX + (random.nextFloat() - 0.5f) * 0.5f
             blob.p1y = midY + (random.nextFloat() - 0.5f) * 0.5f
 
-            val baseSize = 0.12f + random.nextFloat() * 0.08f
-            val finalTargetSize = baseSize * blob.massScale
-
-            blob.startSize = 0.01f
-            blob.endSize = finalTargetSize
+            val baseMass = 0.04f + random.nextFloat() * 0.08f
+            blob.mass = baseMass * blob.massScale
         }
     }
 
@@ -233,14 +226,16 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
         val t = blurStrength.coerceIn(0f, 1f)
 
-        // --- TIMING LOGIC (With Overlap) ---
-        // Blur Phase: 0.0 -> 0.2
-        // Blob Phase: 0.1 -> 1.0
+        // --- TIMING LOGIC (DISTINCT PHASES) ---
+        // Phase 1 (0.0 -> 0.2): "Frosted Blurring"
+        // physicsT is 0.0, so Blobs sit at StartX/Y. Shader fades to this static liquid state.
 
-        val physicsRaw = (t - 0.1f) / 0.9f
+        // Phase 2 (0.2 -> 1.0): "Movement"
+        // physicsT goes 0.0 -> 1.0. The liquid starts to swirl.
+
+        val physicsRaw = (t - 0.2f) / 0.8f
         val physicsT = physicsRaw.coerceIn(0f, 1f)
 
-        // MOVEMENT CURVE: Fast Start, Slow Settle
         val progress = 1.0f - (1.0f - physicsT).pow(3)
 
         var idx = 0
@@ -248,7 +243,6 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         for (b in blobs) {
             if (idx >= MAX_BLOBS) break
 
-            // Cubic Bezier Movement
             val u = 1.0f - progress
             val tt = progress * progress
             val uu = u * u
@@ -257,17 +251,12 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
             val bx = (uu * b.startX) + (ut2 * b.p1x) + (tt * b.endX)
             val by = (uu * b.startY) + (ut2 * b.p1y) + (tt * b.endY)
 
-            // Clean movement, no wobble
-            val bSize = b.startSize + (b.endSize - b.startSize) * progress
-
             blobPosBuffer[idx * 2] = bx
             blobPosBuffer[idx * 2 + 1] = by
-            blobSizesBuffer[idx] = bSize
-
+            blobSizesBuffer[idx] = b.mass
             blobColorsBuffer[idx * 3] = b.color[0]
             blobColorsBuffer[idx * 3 + 1] = b.color[1]
             blobColorsBuffer[idx * 3 + 2] = b.color[2]
-
             idx++
         }
 
@@ -281,7 +270,6 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uAspectRatio"), aspectRatio)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uBlurStrength"), blurStrength)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uDimLevel"), dimLevel)
-        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uIsSamsung"), if (isSamsung) 1.0f else 0.0f)
 
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, sharpTextureId)
@@ -425,7 +413,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         val step = 10
         for (y in 0 until h step step) {
             for (x in 0 until w step step) {
-                samples.add(ColorPoint(blurred[x, y], x, y))
+                samples.add(ColorPoint(blurred.getPixel(x, y), x, y))
             }
         }
         val colorBuckets = medianCut(samples, targetColors)
