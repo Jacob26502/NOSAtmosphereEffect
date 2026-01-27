@@ -21,17 +21,13 @@ import kotlin.math.min
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.cos
 import androidx.core.graphics.createBitmap
 import java.util.Random
 
 class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
-    // --- PROPERTY TRIGGER ---
     var blurStrength: Float = 0.0f
         set(value) {
-            // Trigger randomization for the NEXT unlock when screen turns off (0.0)
             if (value == 0.0f && field != 0.0f) {
                 reRollTargets()
             }
@@ -50,7 +46,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     private var fboId: Int = 0
     private var aspectRatio: Float = 1.0f
 
-    // --- PHYSICS STATE ---
+    // CLEANED: Removed wobble properties
     data class BlobPhysics(
         val color: FloatArray,
         val startX: Float, val startY: Float,
@@ -58,25 +54,22 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         var endX: Float, var endY: Float,
         var startSize: Float,
         var endSize: Float,
-        val massScale: Float,
-        var wobblePhase: Float,
-        var wobbleSpeed: Float
+        val massScale: Float
     )
 
     private val MAX_BLOBS = 16
     private var blobs = mutableListOf<BlobPhysics>()
     private val random = Random()
 
-    // Buffers
     private val blobColorsBuffer = FloatArray(MAX_BLOBS * 3)
     private val blobPosBuffer = FloatArray(MAX_BLOBS * 2)
     private val blobSizesBuffer = FloatArray(MAX_BLOBS)
 
     private val vertices = floatArrayOf(
-        -1f, -1f,  0f, 1f, // Bottom-Left Screen -> UV(0, 1)
-        1f, -1f,  1f, 1f,  // Bottom-Right Screen -> UV(1, 1)
-        -1f,  1f,  0f, 0f, // Top-Left Screen -> UV(0, 0)
-        1f,  1f,  1f, 0f   // Top-Right Screen -> UV(1, 0)
+        -1f, -1f,  0f, 1f,
+        1f, -1f,  1f, 1f,
+        -1f,  1f,  0f, 0f,
+        1f,  1f,  1f, 0f
     )
     private lateinit var vertexBuffer: FloatBuffer
 
@@ -144,7 +137,6 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         blurredBitmap.recycle()
     }
 
-    // --- BLOB INITIALIZATION ---
     private fun initBaseBlobs(blurred: Bitmap) {
         val rawClusters = extractColorsFromBlurred(blurred, 16)
         blobs.clear()
@@ -162,7 +154,6 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         val mergedClusters = mutableListOf<TempCluster>()
         val processed = BooleanArray(tempClusters.size)
 
-        // Merging Pass (Combine neighbors of similar color)
         for (i in tempClusters.indices) {
             if (processed[i]) continue
             val main = tempClusters[i]
@@ -191,21 +182,14 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
         for (cluster in mergedClusters) {
             val clr = floatArrayOf(cluster.r / 255f, cluster.g / 255f, cluster.b / 255f)
-
-            // Reduced Mass Scale: Cap at 1.4x
             val massScale = min(1.4f, 1.0f + (cluster.count * 0.05f))
-
-            // FIX: REMOVED "1.0f - y" flip.
-            // Using direct coordinate since GL texture coordinates align with Bitmap.
-            val correctedY = cluster.y
 
             blobs.add(BlobPhysics(
                 color = clr,
-                startX = cluster.x, startY = correctedY,
+                startX = cluster.x, startY = cluster.y,
                 p1x = 0f, p1y = 0f, endX = 0f, endY = 0f,
                 startSize = 0f, endSize = 0f,
-                massScale = massScale,
-                wobblePhase = 0f, wobbleSpeed = 0f
+                massScale = massScale
             ))
         }
 
@@ -214,30 +198,22 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
     private fun reRollTargets() {
         for (blob in blobs) {
-            // MOVEMENT CONSTRAINT:
-            // Wander within +/- 0.25 of origin.
             val driftX = (random.nextFloat() - 0.5f) * 0.5f
             val driftY = (random.nextFloat() - 0.5f) * 0.5f
 
             blob.endX = (blob.startX + driftX).coerceIn(0.1f, 0.9f)
             blob.endY = (blob.startY + driftY).coerceIn(0.1f, 0.9f)
 
-            // Curve Control Point
             val midX = (blob.startX + blob.endX) / 2f
             val midY = (blob.startY + blob.endY) / 2f
             blob.p1x = midX + (random.nextFloat() - 0.5f) * 0.5f
             blob.p1y = midY + (random.nextFloat() - 0.5f) * 0.5f
 
-            // Reduced Base Size (0.12 to 0.20 max)
             val baseSize = 0.12f + random.nextFloat() * 0.08f
             val finalTargetSize = baseSize * blob.massScale
 
-            // Animation: Grow from 0.0 to Final Size
             blob.startSize = 0.01f
             blob.endSize = finalTargetSize
-
-            blob.wobblePhase = random.nextFloat() * 10f
-            blob.wobbleSpeed = 2.0f + random.nextFloat() * 4.0f
         }
     }
 
@@ -256,32 +232,35 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         GLES30.glUseProgram(programId)
 
         val t = blurStrength.coerceIn(0f, 1f)
-        val physicsRaw = (t - 0.3f) / 0.7f
+
+        // --- TIMING LOGIC ---
+        // 0.0 -> 0.2: Pure Blur (Shader)
+        // 0.2 -> 1.0: Physics Movement
+        val physicsRaw = (t - 0.2f) / 0.8f
         val physicsT = physicsRaw.coerceIn(0f, 1f)
+
+        // MOVEMENT CURVE: Fast Start, Slow Settle
+        // cubic Ease-Out: 1 - (1-t)^3
+        // At 50% time, it covers 87.5% distance.
         val progress = 1.0f - (1.0f - physicsT).pow(3)
 
         var idx = 0
-        val time = System.currentTimeMillis() / 1000f
 
         for (b in blobs) {
             if (idx >= MAX_BLOBS) break
 
+            // Standard Cubic Bezier Calculation
             val u = 1.0f - progress
             val tt = progress * progress
             val uu = u * u
             val ut2 = 2 * u * progress
 
-            var bx = (uu * b.startX) + (ut2 * b.p1x) + (tt * b.endX)
-            var by = (uu * b.startY) + (ut2 * b.p1y) + (tt * b.endY)
+            val bx = (uu * b.startX) + (ut2 * b.p1x) + (tt * b.endX)
+            val by = (uu * b.startY) + (ut2 * b.p1y) + (tt * b.endY)
 
-            // Position Wobble (Movement)
-            if (physicsT > 0.0f) {
-                val wobbleStrength = 0.01f * (1.0f - progress)
-                bx += sin(time * b.wobbleSpeed + b.wobblePhase) * wobbleStrength
-                by += cos(time * b.wobbleSpeed + b.wobblePhase) * wobbleStrength
-            }
+            // NOTE: Removed the "+ sin(time)" jitter.
+            // The position 'bx, by' now moves smoothly along the curve only.
 
-            // Size Growth
             val bSize = b.startSize + (b.endSize - b.startSize) * progress
 
             blobPosBuffer[idx * 2] = bx
@@ -320,7 +299,6 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         drawQuad(aPosLoc, aTexLoc)
     }
 
-    // --- HELPERS ---
     private fun createEmptyTexture(width: Int, height: Int): Int {
         val t = IntArray(1); GLES30.glGenTextures(1, t, 0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, t[0])
