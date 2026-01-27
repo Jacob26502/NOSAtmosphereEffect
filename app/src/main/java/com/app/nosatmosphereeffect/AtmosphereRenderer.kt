@@ -233,7 +233,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
             val finalTargetSize = baseSize * blob.massScale
 
             // Animation: Grow from 0.0 to Final Size
-            blob.startSize = 0.0f
+            blob.startSize = 0.01f
             blob.endSize = finalTargetSize
 
             blob.wobblePhase = random.nextFloat() * 10f

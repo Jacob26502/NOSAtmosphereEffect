@@ -6,7 +6,6 @@ out vec4 fragColor;
 
 uniform sampler2D uTextureSharp;
 uniform sampler2D uTextureBlur;
-
 #define MAX_BLOBS 16
 uniform vec3 uBlobColors[MAX_BLOBS];
 uniform vec2 uBlobPositions[MAX_BLOBS];
@@ -16,11 +15,6 @@ uniform float uAspectRatio;
 
 uniform float uBlurStrength;
 uniform float uDimLevel;
-
-// Simple pseudo-random function for noise
-float rand(vec2 co){
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-}
 
 void main() {
     float t = uBlurStrength;
@@ -36,9 +30,6 @@ void main() {
     float globalOpacity = smoothstep(0.3, 0.8, t);
 
     // Time variable for animating the shape wobble
-    // We use blurStrength as a proxy for time progress if needed,
-    // but ideally we'd pass a uTime uniform.
-    // Here we can use uBlurStrength to drive the distortion phase.
     float timePhase = t * 10.0;
 
     if (globalOpacity > 0.01 && uBlobCount > 0) {
@@ -58,21 +49,23 @@ void main() {
             float radius = uBlobSizes[i];
 
             // SHAPE DISTORTION:
-            // Add sine waves to the radius based on angle.
-            // This makes it look like an amoeba/liquid rather than a perfect circle.
-            // 3.0, 5.0 are frequencies. timePhase makes it rotate/undulate.
             float distortion = sin(angle * 3.0 + timePhase + float(i)) * 0.02 +
             cos(angle * 5.0 - timePhase) * 0.02;
 
-            // Apply distortion to the effective radius check
-            float effectiveRadius = radius + distortion;
+            // FIX 1: Clamp effective radius.
+            // Prevents negative radius when blobs are tiny (start of animation),
+            // which stops "weird lines" caused by math errors.
+            float effectiveRadius = max(0.001, radius + distortion);
 
-            // Smooth border
-            float alpha = smoothstep(effectiveRadius, effectiveRadius * 0.4, dist);
+            // FIX 2: Correct smoothstep order.
+            // smoothstep is UNDEFINED if edge0 >= edge1.
+            // We must use (low, high) and invert the result (1.0 - x).
+            // This creates a perfectly smooth, stable soft circle.
+            float alpha = 1.0 - smoothstep(effectiveRadius * 0.4, effectiveRadius, dist);
 
             alpha *= globalOpacity;
 
-            // Layering (No color mixing)
+            // Layering
             if (alpha > 0.0) {
                 finalColor = mix(finalColor, uBlobColors[i], alpha);
             }
@@ -81,6 +74,5 @@ void main() {
 
     // --- 3. Dimming ---
     finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);
-
     fragColor = vec4(finalColor, 1.0);
 }
