@@ -52,7 +52,7 @@ void main() {
     // Phase 2: Frosted -> Muddy Background (0.2 to 0.8)
     // FIX: Extended the fade duration significantly (was 0.5).
     // This creates a super smooth transition from "Frosted Glass" to "Moving Colors".
-    float cloudMorph = smoothstep(0.1, 0.9, t);
+    float cloudMorph = smoothstep(0.2, 0.8, t);
 
     vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
     vec3 frosted = texture(uTextureBlur, vTexCoord).rgb;
@@ -61,18 +61,15 @@ void main() {
     vec3 currentBg = mix(sharp, frosted, blurPhase);
 
     // If movement started, slowly fade to Muddy Background
-    if (t > 0.1) {
+    if (t > 0.2) {
         currentBg = mix(currentBg, muddyBackground, cloudMorph);
     }
-
-    // Apply Global Dimming to background
-    currentBg = mix(currentBg, vec3(0.0), uDimLevel * t);
 
     // --- 3. Blob Layering (The "Old Good Way") ---
     vec3 finalColor = currentBg;
 
     // Phase 3: Blob Appearance
-    float blobOpacity = smoothstep(0.1, 0.9, t);
+    float blobOpacity = smoothstep(0.2, 0.7, t);
 
     if (blobOpacity > 0.01 && uBlobCount > 0) {
         for(int i = 0; i < MAX_BLOBS; i++) {
@@ -87,7 +84,7 @@ void main() {
 
             // Soft Blob Logic (Original)
             float effectiveRadius = radius;
-            float alpha = 1.0 - smoothstep(effectiveRadius * 0.4, effectiveRadius, dist);
+            float alpha = 1.0 - smoothstep(0.0, effectiveRadius, dist);
 
             alpha *= blobOpacity;
 
@@ -97,6 +94,8 @@ void main() {
             }
         }
     }
+
+    finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);
 
     fragColor = vec4(finalColor, 1.0);
 }

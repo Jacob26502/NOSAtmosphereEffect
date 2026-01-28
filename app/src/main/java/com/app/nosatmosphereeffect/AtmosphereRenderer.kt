@@ -23,7 +23,6 @@ import kotlin.math.hypot
 import kotlin.math.pow
 import androidx.core.graphics.createBitmap
 import java.util.Random
-import androidx.core.graphics.get
 
 class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
@@ -166,7 +165,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
                 val colorDist = hypot((main.r - other.r).toFloat(), (main.g - other.g).toFloat()) + abs(main.b - other.b)
                 val spatialDist = hypot(main.x - other.x, main.y - other.y)
 
-                if (colorDist < 40.0f && spatialDist < 0.25f) {
+                if (colorDist < 90.0f && spatialDist < 0.25f) {
                     val totalCount = main.count + other.count
                     main.x = (main.x * main.count + other.x * other.count) / totalCount
                     main.y = (main.y * main.count + other.y * other.count) / totalCount
