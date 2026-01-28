@@ -84,7 +84,7 @@ void main() {
 
             // Soft Blob Logic (Original)
             float effectiveRadius = radius;
-            float alpha = 1.0 - smoothstep(effectiveRadius * 0.4, effectiveRadius, dist);
+            float alpha = 1.0 - smoothstep(0.0, effectiveRadius, dist);
 
             alpha *= blobOpacity;
 
