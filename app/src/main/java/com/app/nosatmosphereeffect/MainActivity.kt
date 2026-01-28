@@ -2,13 +2,11 @@ package com.app.nosatmosphereeffect
 
 import android.app.WallpaperManager
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.slider.Slider
@@ -20,14 +18,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sliderDimness: Slider
 
     private lateinit var btnUpdateDimness: Button
-
-    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            val intent = Intent(this, CropActivity::class.java)
-            intent.putExtra("IMAGE_URI", it.toString())
-            startActivity(intent)
-        }
-    }
+    private lateinit var btnMainAction: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,27 +30,33 @@ class MainActivity : AppCompatActivity() {
         layoutSettings = findViewById(R.id.layoutSettings)
         sliderDimness = findViewById(R.id.sliderDimness)
         btnUpdateDimness = findViewById(R.id.btnUpdateDimness)
+        btnMainAction = findViewById(R.id.btnMainAction)
 
-        findViewById<Button>(R.id.btnMainAction).setOnClickListener {
-            pickImage.launch("image/*")
+        btnMainAction.setOnClickListener {
+            startActivity(Intent(this, EffectSelectionActivity::class.java))
         }
+
         sliderDimness.addOnChangeListener { _, value, _ ->
             updateButtonState(value)
         }
-        findViewById<Button>(R.id.btnUpdateDimness).setOnClickListener {
+        btnUpdateDimness.setOnClickListener {
             applyDimnessUpdate()
         }
     }
+
     override fun onResume() {
         super.onResume()
         checkWallpaperStatus()
     }
 
     private fun checkWallpaperStatus() {
-        if (isServiceActive()) {
+        val activeEffect = getActiveEffectType()
+        if (activeEffect != null) {
+            btnMainAction.setText(R.string.action_change_effect)
             layoutSettings.visibility = View.VISIBLE
             loadCurrentDimness()
         } else {
+            btnMainAction.setText(R.string.action_select_effect)
             layoutSettings.visibility = View.GONE
         }
     }
@@ -96,9 +93,17 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Wallpaper Updated!", Toast.LENGTH_SHORT).show()
     }
 
-    private fun isServiceActive(): Boolean {
+    private fun getActiveEffectType(): String? {
         val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo
-        return info != null && info.packageName == packageName
+        val info = wm.wallpaperInfo ?: return null
+        if (info.packageName == packageName) {
+            val componentName = info.component.className
+            return when (componentName) {
+                AtmosphereService::class.java.name -> "ORIGINAL"
+                BlurToSharpService::class.java.name -> "REVERSE"
+                else -> null
+            }
+        }
+        return null
     }
 }

@@ -4,7 +4,7 @@
 ## ⚠️ Device Support & Disclaimer
 
 **Current Testing Status:**
-This application has currently been tested **exclusively on the Samsung Galaxy S25 Ultra and Pixel 7a**.
+This application has currently been tested **exclusively on the Samsung Galaxy S25 Ultra**.
 
 While it may work on other Android devices running Android 16 (API 36), behavior on different manufacturers' skins (FuntouchOS, OxygenOS, etc.) is not guaranteed.
 
@@ -12,39 +12,48 @@ While it may work on other Android devices running Android 16 (API 36), behavior
 
 Follow these steps to set up the effect properly on your device.
 
-### 1\. Select Your Image
+### 1\. Select Your Effect
 
-Open the app and tap the **"Select & Apply"** button. Choose the image you wish to use from your device's gallery.
+Open the app and choose your desired atmosphere style from the selection screen:
 
-### 2\. Adjust Alignment
+* **Original Atmosphere:** The wallpaper is original sharp image initially and then transitions to blurred version when unlocked (Classic Nothing OS style).
+* **Reverse Atmosphere:** The wallpaper is blurred initially and then sharpens back to original image when you unlock (Misty wake-up effect).
 
-Use gestures to pinch-to-zoom and drag the image to your desired position. What you see inside the view is exactly how the wallpaper will be cropped. Once satisfied, press **"Apply"**.
+### 2\. Select & Align Image
 
-### 3\. Application Options
+After selecting an effect, pick an image from your gallery. Use gestures to pinch-to-zoom and drag the image to your desired position. What you see inside the view is exactly how the wallpaper will be cropped. Once satisfied, press **"Apply"**.
 
-After pressing Apply, a dialog will appear with two checkboxes. Configure them based on your needs:
+### 3\. Application & Activation
 
-  * **Option 1: Set Static Lock Screen**
-      * **What it does:** Sets the cropped image as your system Lock Screen wallpaper.
-      * **⚠️ Important Note for Samsung Users:** Enabling this option will cause the Adaptive Clock to stop working on OneUI (with or without LockStar). If you rely on the adaptive clock, uncheck this and set your lock screen manually using the image either saved in Option 2 or the original image.
-  * **Option 2: Save Copy to Gallery**
-      * **What it does:** Saves a copy of the final cropped image to your public gallery (`Pictures/Atmosphere`).
-      * **Note:** This only keeps the *latest* applied wallpaper. You can use this file to manually set your Lock Screen wallpaper later if needed.
+The setup process differs slightly depending on which effect you selected. Please follow the instructions for your chosen mode:
 
-### 4\. Activate the Live Wallpaper (Crucial Step)
+#### 🅰️ If you chose "Original Atmosphere":
 
-Once you confirm the options above, the app will redirect you to the Android System's Live Wallpaper preview screen.
+1.  **Configure Options:** A dialog will appear with two checkboxes:
+    * **Option 1: Set Static Lock Screen**
+        * *What it does:* Sets the cropped image as your system Lock Screen wallpaper.
+        * *⚠️ Samsung Users:* Enabling this may cause the Adaptive Clock to stop working. If you need the adaptive clock, uncheck this and set the lock screen manually later.
+    * **Option 2: Save Copy to Gallery**
+        * *What it does:* Saves the cropped image to `Pictures/Atmosphere` for backup.
+2.  **Activate Live Wallpaper:**
+    * The app will redirect you to the Android System's Live Wallpaper preview.
+    * Tap **"Set Wallpaper"**.
+    * **MANDATORY:** You must select **ONLY "Home Screen"**.
+    * *> Why? The Original effect works by transitioning from a static Lock Screen image to the Live Wallpaper on the Home Screen.*
 
-1.  Tap **"Set Wallpaper"**.
-2.  **MANDATORY:** You will likely be presented with options (e.g. "Lock Screen" or "Home Screen" or "Home Screen and Lock Screen").
-3.  **You must select ONLY "Home Screen".**
+#### 🅱️ If you chose "Reverse Atmosphere":
 
-> **Why?** If you apply the live wallpaper to both the Lock Screen and Home Screen, the transition effect will animate for both Lock Screen and Home Screen which is not the intended effect.
+1.  **Proceed to Preview:** You will be prompted to apply the wallpaper.
+2.  **Activate Live Wallpaper:**
+    * The app will redirect you to the Android System's Live Wallpaper preview.
+    * Tap **"Set Wallpaper"**.
+    * **MANDATORY:** You must select **"Home Screen and Lock Screen"**.
+    * *> Why? The Reverse effect runs entirely as a live wallpaper to handle the blurred state while the phone is locked.*
 
 ## Known Issues
 
-  * **Samsung Adaptive Clock:** As mentioned, programmatically setting the lock screen (Option 1) interferes with Samsung's Adaptive Clock.
-  * **Device Compatibility:** Only verified on S25 Ultra and Pixel 7a.
+* **Samsung Adaptive Clock:** As mentioned, programmatically setting the lock screen interferes with Samsung's Adaptive Clock on OneUI.
+* **Device Compatibility:** Only verified on S25 Ultra.
 
 ## Build & Installation
 
