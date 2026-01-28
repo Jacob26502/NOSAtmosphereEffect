@@ -291,7 +291,7 @@ class CropActivity : AppCompatActivity() {
     private fun isServiceActive(): Boolean {
         val wm = WallpaperManager.getInstance(this)
         val info = wm.wallpaperInfo
-        return info != null && info.packageName == packageName
+        return info != null && info.component.className == AtmosphereService::class.java.name
     }
 
     private fun activateService() {

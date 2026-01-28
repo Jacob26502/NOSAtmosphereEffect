@@ -195,7 +195,7 @@ class BlurToSharpCropActivity : AppCompatActivity() {
     private fun isServiceActive(): Boolean {
         val wm = WallpaperManager.getInstance(this)
         val info = wm.wallpaperInfo
-        return info != null && info.packageName == packageName
+        return info != null && info.component.className == BlurToSharpService::class.java.name
     }
 
     private fun activateService() {
