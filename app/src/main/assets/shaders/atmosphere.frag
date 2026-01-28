@@ -69,6 +69,9 @@ void main() {
     vec3 finalColor = currentBg;
 
     // Phase 3: Blob Appearance
+    float blobOpacity = smoothstep(0.15, 0.3, t);
+
+    if (blobOpacity > 0.01 && uBlobCount > 0) {
         for(int i = 0; i < MAX_BLOBS; i++) {
             if (i >= uBlobCount) break;
 
@@ -83,8 +86,13 @@ void main() {
             float effectiveRadius = radius;
             float alpha = 1.0 - smoothstep(0.0, effectiveRadius, dist);
 
-            finalColor = mix(finalColor, uBlobColors[i], alpha);
+            alpha *= blobOpacity;
 
+            // Soft Additive Mixing (The look you liked)
+            if (alpha > 0.0) {
+                finalColor = mix(finalColor, uBlobColors[i], alpha);
+            }
+        }
     }
 
     finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);
