@@ -5,10 +5,13 @@ in vec2 vTexCoord;
 out vec4 fragColor;
 
 uniform sampler2D uTextureSharp;
-#define MAX_BLOBS 32
+uniform sampler2D uTextureBlur;
+
+// Reverted to 16 (Performance + Aesthetic of the "Good" version)
+#define MAX_BLOBS 16
 uniform vec3 uBlobColors[MAX_BLOBS];
 uniform vec2 uBlobPositions[MAX_BLOBS];
-uniform float uBlobSizes[MAX_BLOBS]; // Mass
+uniform float uBlobSizes[MAX_BLOBS];
 uniform int uBlobCount;
 uniform float uAspectRatio;
 
@@ -17,46 +20,82 @@ uniform float uDimLevel;
 
 void main() {
     float t = uBlurStrength;
-
-    // --- LIQUID RECONSTRUCTION (Shepard's Method) ---
-    vec3 weightedColorSum = vec3(0.0);
-    float totalWeight = 0.0;
-
     vec2 uv = vTexCoord;
     uv.x *= uAspectRatio;
 
+    // --- 1. Background Calculation (Muddy Colors) ---
+    vec3 cloudSum = vec3(0.0);
+    float cloudWeight = 0.0;
+
+    // We calculate the background 'Cloud' using a very wide falloff
     for(int i = 0; i < MAX_BLOBS; i++) {
         if (i >= uBlobCount) break;
+        vec2 pos = uBlobPositions[i];
+        pos.x *= uAspectRatio;
+        float dist = length(uv - pos);
 
-        vec2 blobPos = uBlobPositions[i];
-        blobPos.x *= uAspectRatio;
-
-        float dist = length(uv - blobPos);
-
-        // Weight calculation (1/dist^3)
-        float weight = uBlobSizes[i] / (pow(dist, 3.0) + 0.002);
-
-        weightedColorSum += uBlobColors[i] * weight;
-        totalWeight += weight;
+        // Power 2.0 creates a very wide, muddy gradient that fills the screen
+        float w = uBlobSizes[i] / (pow(dist, 2.0) + 0.05);
+        cloudSum += uBlobColors[i] * w;
+        cloudWeight += w;
     }
 
-    vec3 liquidColor = vec3(0.0);
-    if (totalWeight > 0.0) {
-        liquidColor = weightedColorSum / totalWeight;
+    vec3 muddyBackground = vec3(0.0);
+    if (cloudWeight > 0.0) {
+        muddyBackground = cloudSum / cloudWeight;
     }
 
-    // --- TIMING LOGIC ---
-    // 0.0 -> 0.2: Fade from Sharp to Liquid (Static Frosted Look)
-    // 0.2 -> 1.0: Liquid moves (Positions updated by Renderer)
-    float morphPhase = smoothstep(0.0, 0.2, t);
+    // --- 2. Compose Base Background ---
+    // Phase 1: Sharp -> Frosted (0.0 to 0.2)
+    float blurPhase = smoothstep(0.0, 0.2, t);
 
-    // Dimming applied to background liquid
-    liquidColor = mix(liquidColor, vec3(0.0), uDimLevel * t);
+    // Phase 2: Frosted -> Muddy Background (0.2 to 0.5)
+    // This removes the "static wallpaper" look as blobs start moving
+    float cloudMorph = smoothstep(0.2, 0.5, t);
 
     vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
+    vec3 frosted = texture(uTextureBlur, vTexCoord).rgb;
 
-    // Mix Sharp Photo -> Liquid Field
-    vec3 finalColor = mix(sharp, liquidColor, morphPhase);
+    // Start with Sharp -> Frosted
+    vec3 currentBg = mix(sharp, frosted, blurPhase);
+
+    // If movement started, fade to Muddy Background
+    if (t > 0.2) {
+        currentBg = mix(currentBg, muddyBackground, cloudMorph);
+    }
+
+    // Apply Global Dimming to background
+    currentBg = mix(currentBg, vec3(0.0), uDimLevel * t);
+
+    // --- 3. Blob Layering (The "Old Good Way") ---
+    vec3 finalColor = currentBg;
+
+    // Phase 3: Blob Appearance (0.1 to 0.6)
+    float blobOpacity = smoothstep(0.1, 0.6, t);
+
+    if (blobOpacity > 0.01 && uBlobCount > 0) {
+        for(int i = 0; i < MAX_BLOBS; i++) {
+            if (i >= uBlobCount) break;
+
+            vec2 pos = uBlobPositions[i];
+            pos.x *= uAspectRatio;
+
+            vec2 delta = uv - pos;
+            float dist = length(delta);
+            float radius = uBlobSizes[i];
+
+            // Soft Blob Logic (Original)
+            float effectiveRadius = radius;
+            float alpha = 1.0 - smoothstep(effectiveRadius * 0.4, effectiveRadius, dist);
+
+            alpha *= blobOpacity;
+
+            // Soft Additive Mixing (The look you liked)
+            if (alpha > 0.0) {
+                finalColor = mix(finalColor, uBlobColors[i], alpha);
+            }
+        }
+    }
 
     fragColor = vec4(finalColor, 1.0);
 }
