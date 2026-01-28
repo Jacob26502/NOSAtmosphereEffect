@@ -50,19 +50,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkWallpaperStatus() {
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        val hasEffectSelected = prefs.contains("current_effect_type")
-
-        // Update Button Text Logic
-        if (hasEffectSelected || isServiceActive()) {
+        val activeEffect = getActiveEffectType()
+        if (activeEffect != null) {
             btnMainAction.setText(R.string.action_change_effect)
-        } else {
-            btnMainAction.setText(R.string.action_select_effect)
-        }
-        if (isServiceActive()) {
             layoutSettings.visibility = View.VISIBLE
             loadCurrentDimness()
         } else {
+            btnMainAction.setText(R.string.action_select_effect)
             layoutSettings.visibility = View.GONE
         }
     }
@@ -99,9 +93,17 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Wallpaper Updated!", Toast.LENGTH_SHORT).show()
     }
 
-    private fun isServiceActive(): Boolean {
+    private fun getActiveEffectType(): String? {
         val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo
-        return info != null && info.packageName == packageName
+        val info = wm.wallpaperInfo ?: return null
+        if (info.packageName == packageName) {
+            val componentName = info.component.className
+            return when (componentName) {
+                AtmosphereService::class.java.name -> "ORIGINAL"
+                BlurToSharpService::class.java.name -> "REVERSE"
+                else -> null
+            }
+        }
+        return null
     }
 }

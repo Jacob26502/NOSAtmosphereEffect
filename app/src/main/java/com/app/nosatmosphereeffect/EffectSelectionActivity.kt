@@ -25,9 +25,6 @@ class EffectSelectionActivity : AppCompatActivity() {
             intent.putExtra("IMAGE_URI", it.toString())
             startActivity(intent)
 
-            getSharedPreferences("app_prefs", MODE_PRIVATE).edit {
-                putString("current_effect_type", selectedEffect)
-            }
             finish()
         }
     }
