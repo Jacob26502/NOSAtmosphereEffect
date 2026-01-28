@@ -6,85 +6,88 @@ out vec4 fragColor;
 
 uniform sampler2D uTextureSharp;
 uniform sampler2D uTextureBlur;
+
+// Reverted to 16 (Performance + Aesthetic of the "Good" version)
+#define MAX_BLOBS 16
+uniform vec3 uBlobColors[MAX_BLOBS];
+uniform vec2 uBlobPositions[MAX_BLOBS];
+uniform float uBlobSizes[MAX_BLOBS];
+uniform int uBlobCount;
+uniform float uAspectRatio;
+
 uniform float uBlurStrength;
-uniform float uSeed;
-uniform float uIsSamsung;
 uniform float uDimLevel;
-
-// Rotate UVs around a center point
-vec2 rotate(vec2 uv, float angle) {
-    vec2 center = vec2(0.5);
-    uv -= center;
-    float s = sin(angle);
-    float c = cos(angle);
-    mat2 rot = mat2(c, -s, s, c);
-    return (uv * rot) + center;
-}
-
-// Cubic Ease Out: Fast Start -> Slow Stop
-float easeOutCubic(float x) {
-    return 1.0 - pow(1.0 - x, 3.0);
-}
 
 void main() {
     float t = uBlurStrength;
+    vec2 uv = vTexCoord;
+    uv.x *= uAspectRatio;
 
-    // --- TIMING SEQUENCE ---
-    float blurMix;
-    float moveRaw;
+    // --- 1. Background Calculation (Muddy Colors) ---
+    vec3 cloudSum = vec3(0.0);
+    float cloudWeight = 0.0;
 
-    // Check if Samsung (passed from Kotlin as 1.0 or 0.0)
-    if (uIsSamsung > 0.5) {
-        // 1. Blur Phase (0.0 to 0.11)
-        blurMix = smoothstep(0.0, 0.11, t);
-        // 2. Movement Phase (0.09 to 1.0) [Delayed start]
-        moveRaw = smoothstep(0.09, 1.0, t);
+    // We calculate the background 'Cloud' using a very wide falloff
+    for(int i = 0; i < MAX_BLOBS; i++) {
+        if (i >= uBlobCount) break;
+        vec2 pos = uBlobPositions[i];
+        pos.x *= uAspectRatio;
+        float dist = length(uv - pos);
 
-    } else {
-        // 1. Movement Phase (0.00 to 1.0) [Immediate start]
-        moveRaw = smoothstep(0.0, 1.0, t);
+        // Power 2.0 creates a very wide, muddy gradient that fills the screen
+        float w = uBlobSizes[i] / (pow(dist, 2.0) + 0.05);
+        cloudSum += uBlobColors[i] * w;
+        cloudWeight += w;
     }
 
-    // Apply Physics (Deceleration) to the movement
-    float movePhysics = easeOutCubic(moveRaw);
-
-    // --- MOVEMENT LOGIC ---
-
-    // 1. Zoom (Increase Size)
-    // Only zoom during the movement phase
-    float zoom = 1.0 - (movePhysics * 0.4);
-    vec2 center = vec2(0.5);
-    vec2 zoomedUV = (vTexCoord - center) * zoom + center;
-
-    // 2. Circular / Swirl Movement
-    float randomDir = sign(sin(uSeed));
-    float dist = length(vTexCoord - center);
-
-    // Rotate based on Physics Curve
-    float angle = movePhysics * randomDir * (0.5 + dist);
-
-    vec2 cloudUV = rotate(zoomedUV, angle);
-
-    // 3. Random Destination Shift
-    vec2 drift = vec2(sin(uSeed), cos(uSeed)) * movePhysics * 0.3;
-    cloudUV += drift;
-
-    // --- COMPOSITION ---
-
-    vec4 sharpColor = texture(uTextureSharp, vTexCoord);
-    vec4 cloudColor = texture(uTextureBlur, cloudUV);
-
-    // Mix based on the Blur
-    vec3 result;
-    if(uIsSamsung > 0.5){
-        result = mix(sharpColor.rgb, cloudColor.rgb, blurMix);
-    } else {
-        result = cloudColor.rgb;
+    vec3 muddyBackground = vec3(0.0);
+    if (cloudWeight > 0.0) {
+        muddyBackground = cloudSum / cloudWeight;
     }
 
-    float darken = smoothstep(0.0, 1.0, t) * uDimLevel;
-    result *= (1.0 - darken);
+    // --- 2. Compose Base Background ---
+    // Phase 1: Sharp -> Frosted (0.0 to 0.2)
+    float blurPhase = smoothstep(0.0, 0.2, t);
 
-    fragColor = vec4(result, 1.0);
+    // Phase 2: Frosted -> Muddy Background (0.18 to 0.8)
+    // FIX: Extended the fade duration significantly (was 0.5).
+    // This creates a super smooth transition from "Frosted Glass" to "Moving Colors".
+    float cloudMorph = smoothstep(0.18, 0.5, t);
 
+    vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
+    vec3 frosted = texture(uTextureBlur, vTexCoord).rgb;
+
+    // Start with Sharp -> Frosted
+    vec3 currentBg = mix(sharp, frosted, blurPhase);
+
+    // If movement started, slowly fade to Muddy Background
+    if (t > 0.18) {
+        currentBg = mix(currentBg, muddyBackground, cloudMorph);
+    }
+
+    // --- 3. Blob Layering (The "Old Good Way") ---
+    vec3 finalColor = currentBg;
+
+    // Phase 3: Blob Appearance
+        for(int i = 0; i < MAX_BLOBS; i++) {
+            if (i >= uBlobCount) break;
+
+            vec2 pos = uBlobPositions[i];
+            pos.x *= uAspectRatio;
+
+            vec2 delta = uv - pos;
+            float dist = length(delta);
+            float radius = uBlobSizes[i];
+
+            // Soft Blob Logic (Original)
+            float effectiveRadius = radius;
+            float alpha = 1.0 - smoothstep(0.0, effectiveRadius, dist);
+
+            finalColor = mix(finalColor, uBlobColors[i], alpha);
+
+    }
+
+    finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);
+
+    fragColor = vec4(finalColor, 1.0);
 }
