@@ -230,10 +230,6 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
         val t = blurStrength.coerceIn(0f, 1f)
 
-        // --- TIMING LOGIC (With Overlap) ---
-        // Blur Phase: 0.0 -> 0.2
-        // Blob Phase: 0.1 -> 1.0
-
         val physicsRaw = (t - 0.1f) / 0.9f
         val physicsT = physicsRaw.coerceIn(0f, 1f)
 
@@ -422,7 +418,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         val step = 10
         for (y in 0 until h step step) {
             for (x in 0 until w step step) {
-                samples.add(ColorPoint(blurred[x, y], x, y))
+                samples.add(ColorPoint(blurred.getPixel(x, y), x, y))
             }
         }
         val colorBuckets = medianCut(samples, targetColors)

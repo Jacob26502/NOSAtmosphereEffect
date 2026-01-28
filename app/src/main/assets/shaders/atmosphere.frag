@@ -49,9 +49,10 @@ void main() {
     // Phase 1: Sharp -> Frosted (0.0 to 0.2)
     float blurPhase = smoothstep(0.0, 0.2, t);
 
-    // Phase 2: Frosted -> Muddy Background (0.2 to 0.5)
-    // This removes the "static wallpaper" look as blobs start moving
-    float cloudMorph = smoothstep(0.2, 0.5, t);
+    // Phase 2: Frosted -> Muddy Background (0.2 to 0.8)
+    // FIX: Extended the fade duration significantly (was 0.5).
+    // This creates a super smooth transition from "Frosted Glass" to "Moving Colors".
+    float cloudMorph = smoothstep(0.1, 0.9, t);
 
     vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
     vec3 frosted = texture(uTextureBlur, vTexCoord).rgb;
@@ -59,8 +60,8 @@ void main() {
     // Start with Sharp -> Frosted
     vec3 currentBg = mix(sharp, frosted, blurPhase);
 
-    // If movement started, fade to Muddy Background
-    if (t > 0.2) {
+    // If movement started, slowly fade to Muddy Background
+    if (t > 0.1) {
         currentBg = mix(currentBg, muddyBackground, cloudMorph);
     }
 
@@ -70,8 +71,8 @@ void main() {
     // --- 3. Blob Layering (The "Old Good Way") ---
     vec3 finalColor = currentBg;
 
-    // Phase 3: Blob Appearance (0.1 to 0.6)
-    float blobOpacity = smoothstep(0.1, 0.6, t);
+    // Phase 3: Blob Appearance
+    float blobOpacity = smoothstep(0.1, 0.9, t);
 
     if (blobOpacity > 0.01 && uBlobCount > 0) {
         for(int i = 0; i < MAX_BLOBS; i++) {
