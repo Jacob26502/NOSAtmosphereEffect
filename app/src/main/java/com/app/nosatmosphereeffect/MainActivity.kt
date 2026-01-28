@@ -2,13 +2,11 @@ package com.app.nosatmosphereeffect
 
 import android.app.WallpaperManager
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.slider.Slider
@@ -20,14 +18,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sliderDimness: Slider
 
     private lateinit var btnUpdateDimness: Button
-
-    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            val intent = Intent(this, CropActivity::class.java)
-            intent.putExtra("IMAGE_URI", it.toString())
-            startActivity(intent)
-        }
-    }
+    private lateinit var btnMainAction: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,23 +30,35 @@ class MainActivity : AppCompatActivity() {
         layoutSettings = findViewById(R.id.layoutSettings)
         sliderDimness = findViewById(R.id.sliderDimness)
         btnUpdateDimness = findViewById(R.id.btnUpdateDimness)
+        btnMainAction = findViewById(R.id.btnMainAction)
 
-        findViewById<Button>(R.id.btnMainAction).setOnClickListener {
-            pickImage.launch("image/*")
+        btnMainAction.setOnClickListener {
+            startActivity(Intent(this, EffectSelectionActivity::class.java))
         }
+
         sliderDimness.addOnChangeListener { _, value, _ ->
             updateButtonState(value)
         }
-        findViewById<Button>(R.id.btnUpdateDimness).setOnClickListener {
+        btnUpdateDimness.setOnClickListener {
             applyDimnessUpdate()
         }
     }
+
     override fun onResume() {
         super.onResume()
         checkWallpaperStatus()
     }
 
     private fun checkWallpaperStatus() {
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val hasEffectSelected = prefs.contains("current_effect_type")
+
+        // Update Button Text Logic
+        if (hasEffectSelected || isServiceActive()) {
+            btnMainAction.setText(R.string.action_change_effect)
+        } else {
+            btnMainAction.setText(R.string.action_select_effect)
+        }
         if (isServiceActive()) {
             layoutSettings.visibility = View.VISIBLE
             loadCurrentDimness()

@@ -22,11 +22,28 @@
         </activity>
         <activity
             android:name=".CropActivity" />
+        <activity
+            android:name=".BlurToSharpCropActivity" />
+        <activity
+            android:name=".EffectSelectionActivity" />
         <service
             android:name=".AtmosphereService"
             android:enabled="true"
             android:exported="true"
             android:label="Atmosphere"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/wallpaper" />
+        </service>
+        <service
+            android:name=".BlurToSharpService"
+            android:enabled="true"
+            android:exported="true"
+            android:label="Atmosphere (Reverse)"
             android:permission="android.permission.BIND_WALLPAPER">
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
