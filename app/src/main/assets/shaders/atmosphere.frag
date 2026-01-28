@@ -49,10 +49,10 @@ void main() {
     // Phase 1: Sharp -> Frosted (0.0 to 0.2)
     float blurPhase = smoothstep(0.0, 0.2, t);
 
-    // Phase 2: Frosted -> Muddy Background (0.2 to 0.8)
+    // Phase 2: Frosted -> Muddy Background (0.18 to 0.8)
     // FIX: Extended the fade duration significantly (was 0.5).
     // This creates a super smooth transition from "Frosted Glass" to "Moving Colors".
-    float cloudMorph = smoothstep(0.18, 0.8, t);
+    float cloudMorph = smoothstep(0.18, 0.5, t);
 
     vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
     vec3 frosted = texture(uTextureBlur, vTexCoord).rgb;
@@ -69,9 +69,6 @@ void main() {
     vec3 finalColor = currentBg;
 
     // Phase 3: Blob Appearance
-    float blobOpacity = smoothstep(0.1, 0.11, t);
-
-    if (blobOpacity > 0.01 && uBlobCount > 0) {
         for(int i = 0; i < MAX_BLOBS; i++) {
             if (i >= uBlobCount) break;
 
@@ -86,13 +83,8 @@ void main() {
             float effectiveRadius = radius;
             float alpha = 1.0 - smoothstep(0.0, effectiveRadius, dist);
 
-            alpha *= blobOpacity;
+            finalColor = mix(finalColor, uBlobColors[i], alpha);
 
-            // Soft Additive Mixing (The look you liked)
-            if (alpha > 0.0) {
-                finalColor = mix(finalColor, uBlobColors[i], alpha);
-            }
-        }
     }
 
     finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);

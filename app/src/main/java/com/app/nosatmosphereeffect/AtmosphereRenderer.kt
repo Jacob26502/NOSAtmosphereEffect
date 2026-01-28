@@ -208,7 +208,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
             val baseSize = 0.12f + random.nextFloat() * 0.08f
             val finalTargetSize = baseSize * blob.massScale
 
-            blob.startSize = 0.01f
+            blob.startSize = 0.05f
             blob.endSize = finalTargetSize
         }
     }
