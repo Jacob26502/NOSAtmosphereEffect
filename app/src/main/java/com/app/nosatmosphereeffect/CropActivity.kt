@@ -155,19 +155,26 @@ class CropActivity : AppCompatActivity() {
         val (height: Int, width: Int) = options.run { outHeight to outWidth }
         var inSampleSize = 1
 
+        // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+        // height and width STRICTLY UNDER the requested height and width.
+        // This protects against texture limits (e.g., 4096 or 8192).
         if (height > reqHeight || width > reqWidth) {
             val halfHeight: Int = height / 2
             val halfWidth: Int = width / 2
 
-            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
-            // height and width larger than the requested height and width.
-            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+            // FIX: Loop until dimensions are smaller than or equal to requested size
+            while ((halfHeight / inSampleSize) >= reqHeight || (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2
+            }
+
+            // Extra check: Ensure the final result fits within max texture size (4096 is a safe bet)
+            // If the loop stopped but we are still exactly at 4096+ on one edge, bump it once more if needed.
+            while ((height / inSampleSize) > reqHeight || (width / inSampleSize) > reqWidth) {
                 inSampleSize *= 2
             }
         }
         return inSampleSize
     }
-    // --- END LOADER ---
 
     private fun showApplyDialog(bitmap: Bitmap) {
         val options = arrayOf("Set Static Lock Screen", "Save Copy to Gallery")

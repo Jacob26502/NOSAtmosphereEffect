@@ -11,8 +11,8 @@ android {
         applicationId = "com.app.nosatmosphereeffect"
         minSdk = 36 // Android 16+
         targetSdk = 36
-        versionCode = 11
-        versionName = "4.0.1"
+        versionCode = 12
+        versionName = "4.0.2"
     }
 
     buildFeatures {
