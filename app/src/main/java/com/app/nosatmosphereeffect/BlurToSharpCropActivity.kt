@@ -25,7 +25,7 @@ class BlurToSharpCropActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DynamicColors.applyToActivityIfAvailable(this)
+//        DynamicColors.applyToActivityIfAvailable(this)
         setContentView(R.layout.activity_crop)
 
         val cropView = findViewById<TouchImageView>(R.id.cropImageView)

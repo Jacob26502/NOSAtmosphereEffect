@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand_primary">#7C4DFF</color> <color name="brand_on_primary">#FFFFFF</color>
+    <color name="brand_primary">#2196F3</color>
+    <color name="brand_on_primary">#FFFFFF</color>
+    <color name="fixed_background">#000000</color>
+    <color name="fixed_on_surface">#FFFFFF</color>
+    <color name="fixed_on_surface_variant">#B3FFFFFF</color>
 
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>

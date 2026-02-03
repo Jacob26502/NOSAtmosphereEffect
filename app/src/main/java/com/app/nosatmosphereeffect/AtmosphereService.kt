@@ -92,6 +92,7 @@ class AtmosphereService : GLWallpaperService() {
                 val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                 if (!keyguardManager.isKeyguardLocked) {
                     isLocked = false
+                    playUnlockAnimation()
                 }
                 if (isLocked) {
                     myRenderer?.blurStrength = 0.0f
