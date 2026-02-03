@@ -43,7 +43,10 @@ jobs:
       - name: Install Android Build Tools
         run: echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;${{ env.BUILD_TOOLS_VERSION }}"
 
-      - name: Sign Release APK
+      - name: Build SDK 36 (High)
+        run: ./gradlew assembleRelease -PtargetSdkOverride=36
+
+      - name: Sign SDK 36 APK
         uses: ilharp/sign-android-release@v2
         id: sign_app
         with:
@@ -54,9 +57,31 @@ jobs:
           keyPassword: ${{ secrets.KEY_PASSWORD }}
           buildToolsVersion: ${{ env.BUILD_TOOLS_VERSION }}
 
-      - name: Rename Signed APK
+      - name: Rename SDK 36 APK
         run: |
-          mv "${{ steps.sign_app.outputs.signedFile }}" app/build/outputs/apk/release/app-release.apk
+          # Move the signed file to a safe name so it isn't overwritten
+          mv "${{ steps.sign_app_36.outputs.signedFile }}" app/build/outputs/apk/release/app-release-android-16+.apk
+
+      - name: Clean Build Directory
+        run: ./gradlew clean
+
+      - name: Build SDK 33 (Legacy)
+        run: ./gradlew assembleRelease -PtargetSdkOverride=33
+
+      - name: Sign SDK 33 APK
+        uses: ilharp/sign-android-release@v2
+        id: sign_app_33
+        with:
+          releaseDir: app/build/outputs/apk/release
+          signingKey: ${{ secrets.SIGNING_KEY }}
+          keyAlias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          buildToolsVersion: ${{ env.BUILD_TOOLS_VERSION }}
+
+      - name: Rename SDK 33 APK
+        run: |
+          mv "${{ steps.sign_app_33.outputs.signedFile }}" app/build/outputs/apk/release/app-release-android-13+.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -66,4 +91,6 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
-          files: app/build/outputs/apk/release/app-release.apk
+          files: |
+            app/build/outputs/apk/release/app-release-sdk36.apk
+            app/build/outputs/apk/release/app-release-sdk33.apk

@@ -9,10 +9,13 @@ android {
 
     defaultConfig {
         applicationId = "com.app.nosatmosphereeffect"
-        minSdk = 36 // Android 16+
-        targetSdk = 36
-        versionCode = 12
-        versionName = "4.0.2"
+        val targetSdkEnv = project.findProperty("targetSdkOverride")?.toString()?.toIntOrNull() ?: 36
+        targetSdk = targetSdkEnv
+        minSdk = if (targetSdkEnv >= 36) 36 else 33
+        val baseVersionCode = 13
+        val codeOffset = if (targetSdkEnv >= 36) 200000 else 100000
+        versionCode = baseVersionCode + codeOffset
+        versionName = "4.1.2"
     }
 
     buildFeatures {
@@ -46,10 +49,24 @@ kotlin {
 dependencies {
     implementation(libs.androidx.exifinterface)
     // Versions
-    val coreKtxVersion = "1.17.0"
-    val lifecycleVersion = "2.10.0"
-    val appcompatVersion = "1.7.1"
-    val materialVersion = "1.13.0"
+    val targetSdkEnv = project.findProperty("targetSdkOverride")?.toString()?.toIntOrNull() ?: 36
+
+    val coreKtxVersion: String
+    val lifecycleVersion: String
+    val appcompatVersion: String
+    val materialVersion: String
+
+    if (targetSdkEnv >= 36) {
+        coreKtxVersion = "1.17.0"
+        lifecycleVersion = "2.10.0"
+        appcompatVersion = "1.7.1"
+        materialVersion = "1.13.0"
+    } else {
+        coreKtxVersion = "1.12.0"
+        lifecycleVersion = "2.6.2"
+        appcompatVersion = "1.6.1"
+        materialVersion = "1.11.0"
+    }
 
     // Core Android
     implementation("androidx.core:core-ktx:$coreKtxVersion")
