@@ -26,6 +26,7 @@
         android:background="@drawable/gradient_shadow_top" />
 
     <LinearLayout
+        android:id="@+id/controlsContainerMain"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
