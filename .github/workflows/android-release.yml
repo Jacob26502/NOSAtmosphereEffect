@@ -59,8 +59,7 @@ jobs:
 
       - name: Rename SDK 36 APK
         run: |
-          # Move the signed file to a safe name so it isn't overwritten
-          mv "${{ steps.sign_app_36.outputs.signedFile }}" app/build/outputs/apk/release/app-release-android-16+.apk
+          mv "${{ steps.sign_app_36.outputs.signedFile }}" ./app-release-android-16+.apk
 
       - name: Clean Build Directory
         run: ./gradlew clean
@@ -81,7 +80,7 @@ jobs:
 
       - name: Rename SDK 33 APK
         run: |
-          mv "${{ steps.sign_app_33.outputs.signedFile }}" app/build/outputs/apk/release/app-release-android-13+.apk
+          mv "${{ steps.sign_app_33.outputs.signedFile }}" ./app-release-android-13+.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -92,5 +91,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            app/build/outputs/apk/release/app-release-android-16+.apk
-            app/build/outputs/apk/release/app-release-android-13+.apk
+            app-release-android-16+.apk
+            app-release-android-13+.apk
