@@ -48,7 +48,7 @@ jobs:
 
       - name: Sign SDK 36 APK
         uses: ilharp/sign-android-release@v2
-        id: sign_app
+        id: sign_app_36
         with:
           releaseDir: app/build/outputs/apk/release
           signingKey: ${{ secrets.SIGNING_KEY }}
