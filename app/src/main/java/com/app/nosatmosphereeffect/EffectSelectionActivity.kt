@@ -3,13 +3,9 @@ package com.app.nosatmosphereeffect
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.edit
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.color.DynamicColors
 
 class EffectSelectionActivity : AppCompatActivity() {
 
@@ -31,7 +27,7 @@ class EffectSelectionActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        DynamicColors.applyToActivityIfAvailable(this)
+
         setContentView(R.layout.activity_effect_selection)
 
         val cardOriginal = findViewById<MaterialCardView>(R.id.cardEffectOriginal)

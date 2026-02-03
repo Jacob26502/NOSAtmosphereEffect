@@ -6,14 +6,14 @@
     android:orientation="vertical"
     android:padding="24dp"
     android:gravity="center"
-    android:background="?attr/colorSurface">
+    android:background="@color/black">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Choose Effect"
         android:textAppearance="?attr/textAppearanceDisplaySmall"
-        android:textColor="?attr/colorOnSurface"
+        android:textColor="@color/white"
         android:layout_marginBottom="32dp"
         android:textStyle="bold"/>
 
@@ -24,9 +24,10 @@
         android:clickable="true"
         android:focusable="true"
         android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="@color/black"
         app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:strokeColor="?attr/colorOutline"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/brand_primary"
         app:strokeWidth="1dp">
 
         <LinearLayout
@@ -38,6 +39,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Original Atmosphere"
+                android:textColor="@color/brand_primary"
                 android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textStyle="bold"/>
             <TextView
@@ -45,6 +47,7 @@
                 android:layout_height="wrap_content"
                 android:text="Wake up: Sharp ➔ Blur\nDefault Nothing OS style."
                 android:layout_marginTop="4dp"
+                android:textColor="@color/white_alpha_70"
                 android:textAppearance="?attr/textAppearanceBodyMedium"/>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -55,9 +58,10 @@
         android:layout_height="wrap_content"
         android:clickable="true"
         android:focusable="true"
+        app:cardBackgroundColor="@color/black"
         app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:strokeColor="?attr/colorOutline"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/brand_primary"
         app:strokeWidth="1dp">
 
         <LinearLayout
@@ -69,6 +73,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Reverse Atmosphere"
+                android:textColor="@color/brand_primary"
                 android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textStyle="bold"/>
             <TextView
@@ -76,6 +81,7 @@
                 android:layout_height="wrap_content"
                 android:text="Wake up: Blur ➔ Sharp\nStarts misty, then clears up."
                 android:layout_marginTop="4dp"
+                android:textColor="@color/white_alpha_70"
                 android:textAppearance="?attr/textAppearanceBodyMedium"/>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

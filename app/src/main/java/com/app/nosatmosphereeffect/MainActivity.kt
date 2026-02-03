@@ -8,7 +8,6 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.color.DynamicColors
 import com.google.android.material.slider.Slider
 import androidx.core.content.edit
 
@@ -22,8 +21,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        DynamicColors.applyToActivityIfAvailable(this)
 
         setContentView(R.layout.activity_main)
 
