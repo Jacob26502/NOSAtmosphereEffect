@@ -19,7 +19,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.color.DynamicColors
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -29,7 +28,6 @@ class CropActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-//        DynamicColors.applyToActivityIfAvailable(this)
         setContentView(R.layout.activity_crop)
 
         val cropView = findViewById<TouchImageView>(R.id.cropImageView)
