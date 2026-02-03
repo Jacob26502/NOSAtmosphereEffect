@@ -92,5 +92,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            app/build/outputs/apk/release/app-release-sdk36.apk
-            app/build/outputs/apk/release/app-release-sdk33.apk
+            app/build/outputs/apk/release/app-release-android-16+.apk
+            app/build/outputs/apk/release/app-release-android-13+.apk
