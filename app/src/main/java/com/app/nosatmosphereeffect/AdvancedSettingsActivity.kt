@@ -8,6 +8,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import com.google.android.material.textfield.TextInputEditText
+import android.view.View
+import android.widget.LinearLayout
 
 class AdvancedSettingsActivity : AppCompatActivity() {
 
@@ -20,6 +22,10 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val inputDuration = findViewById<TextInputEditText>(R.id.inputAnimDuration)
         val btnApply = findViewById<Button>(R.id.btnApplyAdvanced)
         val btnReset = findViewById<Button>(R.id.btnResetDefaults)
+        val switchNoise = findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.switchNoise)
+        val layoutNoise = findViewById<LinearLayout>(R.id.layoutNoiseSettings)
+        val inputNoiseScale = findViewById<TextInputEditText>(R.id.inputNoiseScale)
+        val inputNoiseStrength = findViewById<TextInputEditText>(R.id.inputNoiseStrength)
 
         val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
@@ -39,15 +45,37 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             inputDuration.setText("2000")
         }
 
+        switchNoise.isChecked = prefs.getBoolean("enable_noise", false)
+        val savedNoiseScale = prefs.getFloat("noise_scale", -1f)
+        val savedNoiseStrength = prefs.getFloat("noise_strength", -1f)
+
+        inputNoiseScale.setText(if (savedNoiseScale != -1f) savedNoiseScale.toString() else "2000.0")
+        inputNoiseStrength.setText(if (savedNoiseStrength != -1f) savedNoiseStrength.toString() else "0.06")
+
+        val isNoiseEnabled = prefs.getBoolean("enable_noise", false)
+        switchNoise.isChecked = isNoiseEnabled
+        layoutNoise.visibility = if (isNoiseEnabled) View.VISIBLE else View.GONE
+
+        switchNoise.setOnCheckedChangeListener { _, isChecked ->
+            layoutNoise.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+
         btnApply.setOnClickListener {
             val poll = inputPoll.text.toString().toLongOrNull() ?: 50L
             val delay = inputDelay.text.toString().toLongOrNull() ?: 0L
             val duration = inputDuration.text.toString().toLongOrNull() ?: 2000L
+            val enableNoise = switchNoise.isChecked
+            val noiseScale = inputNoiseScale.text.toString().toFloatOrNull() ?: 2000.0f
+            val noiseStrength = inputNoiseStrength.text.toString().toFloatOrNull() ?: 0.06f
 
             prefs.edit {
                 putLong("poll_interval", poll)
                 putLong("lock_delay", delay)
                 putLong("anim_duration", duration)
+                putBoolean("enable_noise", enableNoise)
+                putFloat("noise_scale", noiseScale)
+                putFloat("noise_strength", noiseStrength)
             }
             sendUpdateBroadcast()
         }
@@ -58,12 +86,19 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 remove("poll_interval")
                 remove("lock_delay")
                 remove("anim_duration")
+                remove("enable_noise")
+                remove("noise_scale")
+                remove("noise_strength")
             }
 
             // Visual reset
             inputPoll.setText("50")
             inputDelay.setText("0")
             inputDuration.setText("2000")
+            switchNoise.isChecked = false
+            layoutNoise.visibility = View.GONE
+            inputNoiseScale.setText("2000.0")
+            inputNoiseStrength.setText("0.06")
 
             sendUpdateBroadcast()
         }

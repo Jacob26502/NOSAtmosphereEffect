@@ -28,12 +28,6 @@ class AtmosphereService : GLWallpaperService() {
         private var myRenderer: AtmosphereRenderer? = null
         private var blurAnimator: ValueAnimator? = null
         private var isLocked: Boolean = true
-//        private val isSamsungDevice: Boolean
-//            get() {
-//                val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
-//                val brand = Build.BRAND.lowercase(Locale.ROOT)
-//                return manufacturer.contains("samsung") || brand.contains("samsung")
-//            }
 
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
@@ -101,7 +95,6 @@ class AtmosphereService : GLWallpaperService() {
             val r = getRenderer()
             if (r is AtmosphereRenderer) {
                 myRenderer = r
-//                myRenderer?.isSamsung = isSamsungDevice
                 updateRendererConfig()
                 setRenderer(myRenderer!!)
             }
@@ -182,7 +175,13 @@ class AtmosphereService : GLWallpaperService() {
             val savedPoll = prefs.getLong("poll_interval", -1L)
             val savedDelay = prefs.getLong("lock_delay", -1L)
             val savedDuration = prefs.getLong("anim_duration", -1L)
+            val noise = prefs.getBoolean("enable_noise", false)
+            val scale = prefs.getFloat("noise_scale", 2000.0f)
+            val strength = prefs.getFloat("noise_strength", 0.06f)
 
+            myRenderer?.enableNoise = noise
+            myRenderer?.noiseScale = scale
+            myRenderer?.noiseStrength = strength
             pollInterval = if (savedPoll != -1L) savedPoll else 50L
             lockDelay = if (savedDelay != -1L) savedDelay else 0L
             animDuration = if (savedDuration != -1L) savedDuration else 2500L

@@ -68,6 +68,55 @@
                 android:textColor="@color/white"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchNoise"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Blur Noise (Film Grain)"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:layout_marginBottom="32dp"
+            app:thumbTint="@color/brand_primary"
+            app:trackTint="@color/brand_on_primary"/>
+
+        <LinearLayout
+            android:id="@+id/layoutNoiseSettings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"> <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Noise Scale (Grain Size)"
+            app:helperText="Lower = Larger Grains. Recommended: 2000"
+            app:helperTextTextColor="@color/white_alpha_70"
+            android:layout_marginBottom="24dp"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/inputNoiseScale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal"
+                android:textColor="@color/white"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Noise Strength (Intensity)"
+                app:helperText="0.0 to 1.0. Recommended: 0.06"
+                app:helperTextTextColor="@color/white_alpha_70"
+                android:layout_marginBottom="32dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputNoiseStrength"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:textColor="@color/white"/>
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnApplyAdvanced"
             android:layout_width="match_parent"
