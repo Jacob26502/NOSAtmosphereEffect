@@ -85,6 +85,16 @@
         android:text="@string/update_wallpaper_dimness"
         android:backgroundTint="@color/btn_update_selector"
         android:textColor="@color/text_update_selector"/>
+
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAdvanceSettings"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/advance_settings"
+            android:backgroundTint="@color/brand_primary"
+            android:textColor="@color/brand_on_primary"/>
     </LinearLayout>
 
 </LinearLayout>

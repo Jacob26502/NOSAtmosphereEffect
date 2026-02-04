@@ -22,7 +22,9 @@ class AtmosphereService : GLWallpaperService() {
     }
 
     inner class AtmosphereEngine : GLEngine() {
-
+        private var pollInterval: Long = 50L
+        private var lockDelay: Long = 800L
+        private var animDuration: Long = 2500L
         private var myRenderer: AtmosphereRenderer? = null
         private var blurAnimator: ValueAnimator? = null
         private var isLocked: Boolean = true
@@ -49,7 +51,7 @@ class AtmosphereService : GLWallpaperService() {
                     handler.removeCallbacks(this)
                 } else {
                     // Still locked, check again in 50ms
-                    handler.postDelayed(this, 50)
+                    handler.postDelayed(this, pollInterval)
                 }
             }
         }
@@ -67,7 +69,7 @@ class AtmosphereService : GLWallpaperService() {
                         // Screen off. Stop watching (save battery) and reset state.
                         handler.removeCallbacks(unlockChecker)
                         isLocked = true
-                        handler.postDelayed(resetRunnable, 800)
+                        handler.postDelayed(resetRunnable, lockDelay)
                     }
                     Intent.ACTION_USER_PRESENT -> {
                         // Backup: Keep this as a failsafe in case polling misses (rare)
@@ -146,7 +148,7 @@ class AtmosphereService : GLWallpaperService() {
             requestRender()
 
             blurAnimator = ValueAnimator.ofFloat(0.0f, 1.0f).apply {
-                duration = 2500 // 2.5 Seconds total
+                duration = animDuration
                 interpolator = LinearInterpolator()
                 addUpdateListener { animator ->
                     val value = animator.animatedValue as Float
@@ -175,6 +177,15 @@ class AtmosphereService : GLWallpaperService() {
             val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
             val dim = prefs.getFloat("dim_level", 0.2f)
             myRenderer?.dimLevel = dim
+
+            // New Advanced Settings (Default to -1 to detect "not set")
+            val savedPoll = prefs.getLong("poll_interval", -1L)
+            val savedDelay = prefs.getLong("lock_delay", -1L)
+            val savedDuration = prefs.getLong("anim_duration", -1L)
+
+            pollInterval = if (savedPoll != -1L) savedPoll else 50L
+            lockDelay = if (savedDelay != -1L) savedDelay else 800L
+            animDuration = if (savedDuration != -1L) savedDuration else 2500L
         }
     }
 }

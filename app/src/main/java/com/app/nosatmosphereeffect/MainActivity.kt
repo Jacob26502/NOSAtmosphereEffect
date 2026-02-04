@@ -18,6 +18,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var btnUpdateDimness: Button
     private lateinit var btnMainAction: Button
+    private lateinit var btnAdvanceSettings: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,10 +29,16 @@ class MainActivity : AppCompatActivity() {
         sliderDimness = findViewById(R.id.sliderDimness)
         btnUpdateDimness = findViewById(R.id.btnUpdateDimness)
         btnMainAction = findViewById(R.id.btnMainAction)
+        btnAdvanceSettings = findViewById(R.id.btnAdvanceSettings)
 
         btnMainAction.setOnClickListener {
             startActivity(Intent(this, EffectSelectionActivity::class.java))
         }
+
+        btnAdvanceSettings.setOnClickListener {
+            startActivity(Intent(this, AdvancedSettingsActivity::class.java))
+        }
+
 
         sliderDimness.addOnChangeListener { _, value, _ ->
             updateButtonState(value)

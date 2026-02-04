@@ -26,6 +26,8 @@
             android:name=".BlurToSharpCropActivity" />
         <activity
             android:name=".EffectSelectionActivity" />
+        <activity
+            android:name=".AdvancedSettingsActivity" />
         <service
             android:name=".AtmosphereService"
             android:enabled="true"
