@@ -33,16 +33,45 @@ class AtmosphereService : GLWallpaperService() {
                 return manufacturer.contains("samsung") || brand.contains("samsung")
             }
 
+        private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        private val unlockChecker = object : Runnable {
+            override fun run() {
+                val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                if (!keyguardManager.isKeyguardLocked) {
+                    // BOOM! Device is unlocked. Trigger animation immediately.
+                    isLocked = false
+                    playUnlockAnimation()
+                    // Stop checking
+                    handler.removeCallbacks(this)
+                } else {
+                    // Still locked, check again in 50ms
+                    handler.postDelayed(this, 50)
+                }
+            }
+        }
+
         private val systemEventReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
+                    Intent.ACTION_SCREEN_ON -> {
+                        // Screen turned on. Start watching for unlock immediately.
+                        isLocked = true
+                        handler.removeCallbacks(unlockChecker)
+                        handler.post(unlockChecker)
+                    }
                     Intent.ACTION_SCREEN_OFF -> {
+                        // Screen off. Stop watching (save battery) and reset state.
+                        handler.removeCallbacks(unlockChecker)
                         isLocked = true
                         prepareForNextUnlock()
                     }
                     Intent.ACTION_USER_PRESENT -> {
-                        isLocked = false
-                        playUnlockAnimation()
+                        // Backup: Keep this as a failsafe in case polling misses (rare)
+                        if (isLocked) {
+                            isLocked = false
+                            playUnlockAnimation()
+                            handler.removeCallbacks(unlockChecker)
+                        }
                     }
                     "com.app.nosatmosphereeffect.RELOAD_WALLPAPER" -> {
                         myRenderer?.reloadTexture()
@@ -71,6 +100,7 @@ class AtmosphereService : GLWallpaperService() {
             }
 
             val filter = IntentFilter()
+            filter.addAction(Intent.ACTION_SCREEN_ON)
             filter.addAction(Intent.ACTION_SCREEN_OFF)
             filter.addAction(Intent.ACTION_USER_PRESENT)
             filter.addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
