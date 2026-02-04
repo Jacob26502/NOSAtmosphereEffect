@@ -20,6 +20,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val inputDuration = findViewById<TextInputEditText>(R.id.inputAnimDuration)
         val btnApply = findViewById<Button>(R.id.btnApplyAdvanced)
         val btnReset = findViewById<Button>(R.id.btnResetDefaults)
+        val switchNoise = findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.switchNoise)
 
         val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
@@ -39,15 +40,19 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             inputDuration.setText("2000")
         }
 
+        switchNoise.isChecked = prefs.getBoolean("enable_noise", false)
+
         btnApply.setOnClickListener {
             val poll = inputPoll.text.toString().toLongOrNull() ?: 50L
             val delay = inputDelay.text.toString().toLongOrNull() ?: 0L
             val duration = inputDuration.text.toString().toLongOrNull() ?: 2000L
+            val enableNoise = switchNoise.isChecked
 
             prefs.edit {
                 putLong("poll_interval", poll)
                 putLong("lock_delay", delay)
                 putLong("anim_duration", duration)
+                putBoolean("enable_noise", enableNoise)
             }
             sendUpdateBroadcast()
         }
@@ -58,12 +63,14 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 remove("poll_interval")
                 remove("lock_delay")
                 remove("anim_duration")
+                remove("enable_noise")
             }
 
             // Visual reset
             inputPoll.setText("50")
             inputDelay.setText("0")
             inputDuration.setText("2000")
+            switchNoise.isChecked = false
 
             sendUpdateBroadcast()
         }

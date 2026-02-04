@@ -6,7 +6,7 @@
 **Current Testing Status:**
 This application has currently been tested **exclusively on the Samsung Galaxy S25 Ultra**.
 
-While it may work on other Android devices running Android 16 (API 36), behavior on different manufacturers' skins (FuntouchOS, OxygenOS, etc.) is not guaranteed.
+While it may work on other Android devices running Android 13+ (API 33+), behavior on different manufacturers' skins (FuntouchOS, OxygenOS, etc.) is not guaranteed.
 
 ## Usage Guide
 

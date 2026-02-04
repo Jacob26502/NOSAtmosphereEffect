@@ -180,7 +180,9 @@ class BlurToSharpService : GLWallpaperService() {
             val savedPoll = prefs.getLong("poll_interval", -1L)
             val savedDelay = prefs.getLong("lock_delay", -1L)
             val savedDuration = prefs.getLong("anim_duration", -1L)
+            val noise = prefs.getBoolean("enable_noise", false)
 
+            myRenderer?.enableNoise = noise
             pollInterval = if (savedPoll != -1L) savedPoll else 50L
             lockDelay = if (savedDelay != -1L) savedDelay else 0L
             animDuration = if (savedDuration != -1L) savedDuration else 1500L
