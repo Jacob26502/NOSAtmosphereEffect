@@ -18,6 +18,8 @@ uniform float uAspectRatio;
 uniform float uBlurStrength;
 uniform float uDimLevel;
 uniform float uEnableNoise;
+uniform float uNoiseScale;
+uniform float uNoiseStrength;
 
 float random(vec2 co) {
     return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -103,12 +105,10 @@ void main() {
     finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);
 
     if (uEnableNoise > 0.5) {
-        float noiseScale = 2000.0;
-        vec2 grainUV = floor(uv * noiseScale);
+        vec2 grainUV = floor(uv * uNoiseScale);
         float noise = random(grainUV);
-        float noiseStrength = 0.06;
         float noiseVisibility = smoothstep(0.0, 0.4, t);
-        finalColor += vec3(noise * noiseStrength * noiseVisibility);
+        finalColor += vec3(noise * uNoiseStrength * noiseVisibility);
     }
 
     fragColor = vec4(finalColor, 1.0);

@@ -36,6 +36,8 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     @Volatile var dimLevel: Float = 0.2f
     @Volatile private var needsReload: Boolean = false
     @Volatile var enableNoise: Boolean = false
+    @Volatile var noiseScale: Float = 2000.0f
+    @Volatile var noiseStrength: Float = 0.06f
 
     private var programId: Int = 0
     private var blurProgramId: Int = 0
@@ -273,6 +275,8 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uBlurStrength"), blurStrength)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uDimLevel"), dimLevel)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uEnableNoise"), if (enableNoise) 1.0f else 0.0f)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseScale"), noiseScale)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseStrength"), noiseStrength)
 
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, sharpTextureId)

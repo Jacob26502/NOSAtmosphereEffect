@@ -176,8 +176,12 @@ class AtmosphereService : GLWallpaperService() {
             val savedDelay = prefs.getLong("lock_delay", -1L)
             val savedDuration = prefs.getLong("anim_duration", -1L)
             val noise = prefs.getBoolean("enable_noise", false)
+            val scale = prefs.getFloat("noise_scale", 2000.0f)
+            val strength = prefs.getFloat("noise_strength", 0.06f)
 
             myRenderer?.enableNoise = noise
+            myRenderer?.noiseScale = scale
+            myRenderer?.noiseStrength = strength
             pollInterval = if (savedPoll != -1L) savedPoll else 50L
             lockDelay = if (savedDelay != -1L) savedDelay else 0L
             animDuration = if (savedDuration != -1L) savedDuration else 2500L
