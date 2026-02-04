@@ -104,12 +104,13 @@ class AtmosphereService : GLWallpaperService() {
                 setRenderer(myRenderer!!)
             }
 
-            val filter = IntentFilter()
-            filter.addAction(Intent.ACTION_SCREEN_ON)
-            filter.addAction(Intent.ACTION_SCREEN_OFF)
-            filter.addAction(Intent.ACTION_USER_PRESENT)
-            filter.addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
-            filter.addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_USER_PRESENT)
+                addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
+                addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+            }
 
             registerReceiver(systemEventReceiver, filter, Context.RECEIVER_EXPORTED)
         }
