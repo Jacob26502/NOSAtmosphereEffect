@@ -26,14 +26,18 @@ class AtmosphereService : GLWallpaperService() {
         private var myRenderer: AtmosphereRenderer? = null
         private var blurAnimator: ValueAnimator? = null
         private var isLocked: Boolean = true
-        private val isSamsungDevice: Boolean
-            get() {
-                val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
-                val brand = Build.BRAND.lowercase(Locale.ROOT)
-                return manufacturer.contains("samsung") || brand.contains("samsung")
-            }
+//        private val isSamsungDevice: Boolean
+//            get() {
+//                val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
+//                val brand = Build.BRAND.lowercase(Locale.ROOT)
+//                return manufacturer.contains("samsung") || brand.contains("samsung")
+//            }
 
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+        private val resetRunnable = Runnable {
+            prepareForNextUnlock()
+        }
         private val unlockChecker = object : Runnable {
             override fun run() {
                 val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
@@ -63,10 +67,11 @@ class AtmosphereService : GLWallpaperService() {
                         // Screen off. Stop watching (save battery) and reset state.
                         handler.removeCallbacks(unlockChecker)
                         isLocked = true
-                        prepareForNextUnlock()
+                        handler.postDelayed(resetRunnable, 800)
                     }
                     Intent.ACTION_USER_PRESENT -> {
                         // Backup: Keep this as a failsafe in case polling misses (rare)
+                        handler.removeCallbacks(resetRunnable)
                         if (isLocked) {
                             isLocked = false
                             playUnlockAnimation()
@@ -94,7 +99,7 @@ class AtmosphereService : GLWallpaperService() {
             val r = getRenderer()
             if (r is AtmosphereRenderer) {
                 myRenderer = r
-                myRenderer?.isSamsung = isSamsungDevice
+//                myRenderer?.isSamsung = isSamsungDevice
                 updateRendererConfig()
                 setRenderer(myRenderer!!)
             }
