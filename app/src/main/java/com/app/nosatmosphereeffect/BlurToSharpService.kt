@@ -21,7 +21,7 @@ class BlurToSharpService : GLWallpaperService() {
 
     inner class AtmosphereEngine : GLEngine() {
         private var pollInterval: Long = 50L
-        private var lockDelay: Long = 800L
+        private var lockDelay: Long = 0L
         private var animDuration: Long = 1500L
 
         private var myRenderer: BlurToSharpRenderer? = null
@@ -182,7 +182,7 @@ class BlurToSharpService : GLWallpaperService() {
             val savedDuration = prefs.getLong("anim_duration", -1L)
 
             pollInterval = if (savedPoll != -1L) savedPoll else 50L
-            lockDelay = if (savedDelay != -1L) savedDelay else 800L
+            lockDelay = if (savedDelay != -1L) savedDelay else 0L
             animDuration = if (savedDuration != -1L) savedDuration else 1500L
         }
     }

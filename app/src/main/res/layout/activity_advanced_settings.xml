@@ -40,7 +40,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Lock Delay (ms)"
-            app:helperText="Recommended: 800ms. Time to wait before resetting wallpaper after screen off."
+            app:helperText="Recommended: 0ms. Time to wait before resetting wallpaper during the locking of phone."
             app:helperTextTextColor="@color/white_alpha_70"
             android:layout_marginBottom="24dp"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">

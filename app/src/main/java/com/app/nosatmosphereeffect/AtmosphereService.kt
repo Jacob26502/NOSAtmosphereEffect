@@ -23,7 +23,7 @@ class AtmosphereService : GLWallpaperService() {
 
     inner class AtmosphereEngine : GLEngine() {
         private var pollInterval: Long = 50L
-        private var lockDelay: Long = 800L
+        private var lockDelay: Long = 0L
         private var animDuration: Long = 2500L
         private var myRenderer: AtmosphereRenderer? = null
         private var blurAnimator: ValueAnimator? = null
@@ -184,7 +184,7 @@ class AtmosphereService : GLWallpaperService() {
             val savedDuration = prefs.getLong("anim_duration", -1L)
 
             pollInterval = if (savedPoll != -1L) savedPoll else 50L
-            lockDelay = if (savedDelay != -1L) savedDelay else 800L
+            lockDelay = if (savedDelay != -1L) savedDelay else 0L
             animDuration = if (savedDuration != -1L) savedDuration else 2500L
         }
     }

@@ -62,8 +62,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
             // Visual reset
             inputPoll.setText("50")
-            inputDelay.setText("800")
-            inputDuration.setText("2000") // Visual only
+            inputDelay.setText("0")
+            inputDuration.setText("2000")
 
             sendUpdateBroadcast()
         }
