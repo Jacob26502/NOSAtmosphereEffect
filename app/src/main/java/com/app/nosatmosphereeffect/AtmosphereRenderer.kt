@@ -10,7 +10,6 @@ import android.graphics.Paint
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.GLUtils
-import android.widget.Toast
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -390,9 +389,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
             rawBitmap = createBitmap(1080, 1920)
             rawBitmap.eraseColor(color)
         }
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
-        val metrics = android.util.DisplayMetrics()
-        windowManager.defaultDisplay.getRealMetrics(metrics)
+        val metrics = context.resources.displayMetrics
 
         val screenWidth = metrics.widthPixels
         val screenHeight = metrics.heightPixels

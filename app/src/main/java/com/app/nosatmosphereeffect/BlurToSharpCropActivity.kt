@@ -18,36 +18,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-import androidx.core.view.WindowCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import android.graphics.Color
-import android.widget.LinearLayout
 
 class BlurToSharpCropActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
         setContentView(R.layout.activity_crop_blur_to_sharp)
-
-        val controlsContainer = findViewById<LinearLayout>(R.id.controlsContainerMain)
-        ViewCompat.setOnApplyWindowInsetsListener(controlsContainer) { view, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Apply bottom padding so button isn't covered by nav bar
-            // We keep the original padding (24dp ~ roughly 60-70px) + the inset
-            view.setPadding(
-                view.paddingLeft,
-                view.paddingTop,
-                view.paddingRight,
-                view.paddingBottom + insets.bottom
-            )
-            WindowInsetsCompat.CONSUMED
-        }
 
         val cropView = findViewById<TouchImageView>(R.id.cropImageView)
         val btnSave = findViewById<Button>(R.id.btnSaveCrop)
