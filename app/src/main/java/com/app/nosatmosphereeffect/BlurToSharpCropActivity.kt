@@ -24,7 +24,7 @@ class BlurToSharpCropActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_crop)
+        setContentView(R.layout.activity_crop_blur_to_sharp)
 
         val cropView = findViewById<TouchImageView>(R.id.cropImageView)
         val btnSave = findViewById<Button>(R.id.btnSaveCrop)

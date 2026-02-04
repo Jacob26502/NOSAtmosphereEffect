@@ -22,27 +22,63 @@ class AtmosphereService : GLWallpaperService() {
     }
 
     inner class AtmosphereEngine : GLEngine() {
-
+        private var pollInterval: Long = 50L
+        private var lockDelay: Long = 0L
+        private var animDuration: Long = 2500L
         private var myRenderer: AtmosphereRenderer? = null
         private var blurAnimator: ValueAnimator? = null
         private var isLocked: Boolean = true
-        private val isSamsungDevice: Boolean
-            get() {
-                val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
-                val brand = Build.BRAND.lowercase(Locale.ROOT)
-                return manufacturer.contains("samsung") || brand.contains("samsung")
+//        private val isSamsungDevice: Boolean
+//            get() {
+//                val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
+//                val brand = Build.BRAND.lowercase(Locale.ROOT)
+//                return manufacturer.contains("samsung") || brand.contains("samsung")
+//            }
+
+        private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+        private val resetRunnable = Runnable {
+            prepareForNextUnlock()
+        }
+        private val unlockChecker = object : Runnable {
+            override fun run() {
+                val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                if (!keyguardManager.isKeyguardLocked) {
+                    // BOOM! Device is unlocked. Trigger animation immediately.
+                    isLocked = false
+                    playUnlockAnimation()
+                    // Stop checking
+                    handler.removeCallbacks(this)
+                } else {
+                    // Still locked, check again in 50ms
+                    handler.postDelayed(this, pollInterval)
+                }
             }
+        }
 
         private val systemEventReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
-                    Intent.ACTION_SCREEN_OFF -> {
+                    Intent.ACTION_SCREEN_ON -> {
+                        // Screen turned on. Start watching for unlock immediately.
                         isLocked = true
-                        prepareForNextUnlock()
+                        handler.removeCallbacks(unlockChecker)
+                        handler.post(unlockChecker)
+                    }
+                    Intent.ACTION_SCREEN_OFF -> {
+                        // Screen off. Stop watching (save battery) and reset state.
+                        handler.removeCallbacks(unlockChecker)
+                        isLocked = true
+                        handler.postDelayed(resetRunnable, lockDelay)
                     }
                     Intent.ACTION_USER_PRESENT -> {
-                        isLocked = false
-                        playUnlockAnimation()
+                        // Backup: Keep this as a failsafe in case polling misses (rare)
+                        handler.removeCallbacks(resetRunnable)
+                        if (isLocked) {
+                            isLocked = false
+                            playUnlockAnimation()
+                            handler.removeCallbacks(unlockChecker)
+                        }
                     }
                     "com.app.nosatmosphereeffect.RELOAD_WALLPAPER" -> {
                         myRenderer?.reloadTexture()
@@ -65,16 +101,18 @@ class AtmosphereService : GLWallpaperService() {
             val r = getRenderer()
             if (r is AtmosphereRenderer) {
                 myRenderer = r
-                myRenderer?.isSamsung = isSamsungDevice
+//                myRenderer?.isSamsung = isSamsungDevice
                 updateRendererConfig()
                 setRenderer(myRenderer!!)
             }
 
-            val filter = IntentFilter()
-            filter.addAction(Intent.ACTION_SCREEN_OFF)
-            filter.addAction(Intent.ACTION_USER_PRESENT)
-            filter.addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
-            filter.addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_USER_PRESENT)
+                addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
+                addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+            }
 
             registerReceiver(systemEventReceiver, filter, Context.RECEIVER_EXPORTED)
         }
@@ -110,7 +148,7 @@ class AtmosphereService : GLWallpaperService() {
             requestRender()
 
             blurAnimator = ValueAnimator.ofFloat(0.0f, 1.0f).apply {
-                duration = 2500 // 2.5 Seconds total
+                duration = animDuration
                 interpolator = LinearInterpolator()
                 addUpdateListener { animator ->
                     val value = animator.animatedValue as Float
@@ -139,6 +177,15 @@ class AtmosphereService : GLWallpaperService() {
             val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
             val dim = prefs.getFloat("dim_level", 0.2f)
             myRenderer?.dimLevel = dim
+
+            // New Advanced Settings (Default to -1 to detect "not set")
+            val savedPoll = prefs.getLong("poll_interval", -1L)
+            val savedDelay = prefs.getLong("lock_delay", -1L)
+            val savedDuration = prefs.getLong("anim_duration", -1L)
+
+            pollInterval = if (savedPoll != -1L) savedPoll else 50L
+            lockDelay = if (savedDelay != -1L) savedDelay else 0L
+            animDuration = if (savedDuration != -1L) savedDuration else 2500L
         }
     }
 }

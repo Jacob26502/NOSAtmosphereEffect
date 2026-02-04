@@ -390,6 +390,7 @@ class BlurToSharpRenderer(private val context: Context) : GLSurfaceView.Renderer
             rawBitmap.eraseColor(color)
         }
         val metrics = context.resources.displayMetrics
+
         val screenWidth = metrics.widthPixels
         val screenHeight = metrics.heightPixels
         val width = rawBitmap.width
