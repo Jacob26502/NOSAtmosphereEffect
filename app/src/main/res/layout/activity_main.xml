@@ -92,7 +92,7 @@
             style="@style/Widget.Material3.Button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/advance_settings"
+            android:text="@string/fine_tune"
             android:backgroundTint="@color/brand_primary"
             android:textColor="@color/brand_on_primary"/>
     </LinearLayout>
