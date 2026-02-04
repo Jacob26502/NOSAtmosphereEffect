@@ -29,7 +29,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val savedDuration = prefs.getLong("anim_duration", -1L)
 
         inputPoll.setText(if (savedPoll != -1L) savedPoll.toString() else "50")
-        inputDelay.setText(if (savedDelay != -1L) savedDelay.toString() else "800")
+        inputDelay.setText(if (savedDelay != -1L) savedDelay.toString() else "0")
 
         // For duration, show what is currently saved, or leave empty/generic if using defaults
         if (savedDuration != -1L) {
@@ -41,7 +41,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         btnApply.setOnClickListener {
             val poll = inputPoll.text.toString().toLongOrNull() ?: 50L
-            val delay = inputDelay.text.toString().toLongOrNull() ?: 800L
+            val delay = inputDelay.text.toString().toLongOrNull() ?: 0L
             val duration = inputDuration.text.toString().toLongOrNull() ?: 2000L
 
             prefs.edit {
