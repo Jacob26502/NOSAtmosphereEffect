@@ -26,6 +26,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val layoutNoise = findViewById<LinearLayout>(R.id.layoutNoiseSettings)
         val inputNoiseScale = findViewById<TextInputEditText>(R.id.inputNoiseScale)
         val inputNoiseStrength = findViewById<TextInputEditText>(R.id.inputNoiseStrength)
+        val activeEffect = intent.getStringExtra("ACTIVE_EFFECT_TYPE") ?: "ORIGINAL"
+        val defaultDuration = if (activeEffect == "REVERSE") 1500L else 2500L
 
         val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
@@ -42,7 +44,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             inputDuration.setText(savedDuration.toString())
         } else {
             // Leave empty or set a hint, usually easier to just show 2000 as a placeholder
-            inputDuration.setText("2500")
+            inputDuration.setText(defaultDuration.toString())
         }
 
         switchNoise.isChecked = prefs.getBoolean("enable_noise", false)
@@ -64,7 +66,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         btnApply.setOnClickListener {
             val poll = inputPoll.text.toString().toLongOrNull() ?: 50L
             val delay = inputDelay.text.toString().toLongOrNull() ?: 0L
-            val duration = inputDuration.text.toString().toLongOrNull() ?: 2500L
+            val duration = inputDuration.text.toString().toLongOrNull() ?: defaultDuration
             val enableNoise = switchNoise.isChecked
             val noiseScale = inputNoiseScale.text.toString().toFloatOrNull() ?: 2000.0f
             val noiseStrength = inputNoiseStrength.text.toString().toFloatOrNull() ?: 0.06f
@@ -97,7 +99,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             inputDuration.setText("2500")
             switchNoise.isChecked = false
             layoutNoise.visibility = View.GONE
-            inputNoiseScale.setText("2000.0")
+            inputNoiseScale.setText(defaultDuration.toString())
             inputNoiseStrength.setText("0.06")
 
             sendUpdateBroadcast()

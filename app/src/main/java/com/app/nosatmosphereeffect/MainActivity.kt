@@ -36,7 +36,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnAdvanceSettings.setOnClickListener {
-            startActivity(Intent(this, AdvancedSettingsActivity::class.java))
+            val intent = Intent(this, AdvancedSettingsActivity::class.java)
+            val activeEffect = getActiveEffectType() ?: "ORIGINAL"
+            intent.putExtra("ACTIVE_EFFECT_TYPE", activeEffect)
+            startActivity(intent)
         }
 
 
