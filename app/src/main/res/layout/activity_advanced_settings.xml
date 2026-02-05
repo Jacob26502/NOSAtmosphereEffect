@@ -25,11 +25,16 @@
             android:layout_marginBottom="32dp"/>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutPollInterval"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Unlock Check Interval (ms)"
-            app:helperText="Recommended: 50ms. Lower = Faster response, Higher = Battery saver."
+            app:helperText="Recommended for\nOthers: 50ms | Samsung: 30000ms"
             app:helperTextTextColor="@color/white_alpha_70"
+            app:endIconMode="custom"
+            app:endIconDrawable="@drawable/ic_info"
+            app:endIconTint="@color/brand_primary"
+            app:endIconContentDescription="More Info"
             android:layout_marginBottom="24dp"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
             <com.google.android.material.textfield.TextInputEditText
@@ -41,11 +46,16 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutLockDelay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Lock Delay (ms)"
-            app:helperText="Recommended: 0ms. Time to wait before resetting wallpaper during the locking of phone."
+            app:helperText="Recommended for\nOthers: 500ms | Samsung: 0ms"
             app:helperTextTextColor="@color/white_alpha_70"
+            app:endIconMode="custom"
+            app:endIconDrawable="@drawable/ic_info"
+            app:endIconTint="@color/brand_primary"
+            app:endIconContentDescription="More Info"
             android:layout_marginBottom="24dp"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
             <com.google.android.material.textfield.TextInputEditText
@@ -60,7 +70,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Animation Duration (ms)"
-            app:helperText="Original: 2500ms | Reverse: 1500ms"
+            app:helperText="Recommended for\nOriginal: 2500ms | Reverse: 1500ms"
             app:helperTextTextColor="@color/white_alpha_70"
             android:layout_marginBottom="32dp"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">

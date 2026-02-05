@@ -10,6 +10,8 @@ import androidx.core.content.edit
 import com.google.android.material.textfield.TextInputEditText
 import android.view.View
 import android.widget.LinearLayout
+import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class AdvancedSettingsActivity : AppCompatActivity() {
 
@@ -17,6 +19,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_advanced_settings)
 
+        val layoutPoll = findViewById<TextInputLayout>(R.id.layoutPollInterval)
+        val layoutDelay = findViewById<TextInputLayout>(R.id.layoutLockDelay)
         val inputPoll = findViewById<TextInputEditText>(R.id.inputPollInterval)
         val inputDelay = findViewById<TextInputEditText>(R.id.inputLockDelay)
         val inputDuration = findViewById<TextInputEditText>(R.id.inputAnimDuration)
@@ -60,6 +64,37 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         switchNoise.setOnCheckedChangeListener { _, isChecked ->
             layoutNoise.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+        layoutPoll.setEndIconOnClickListener {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Unlock Check Interval")
+                .setMessage(
+                    "Controls how frequently the app checks if the device has been unlocked.\n\n" +
+                            "• What it solves:\n" +
+                            "If you unlock your phone and the animation starts after a delay, lower this value.\n\n" +
+                            "• Recommended:\n" +
+                            "30000ms for Samsung and most devices (Saves Battery).\n" +
+                            "50ms if you experience delayed animation start."
+                )
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
+        layoutDelay.setEndIconOnClickListener {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Lock Delay")
+                .setMessage(
+                    "Adds a pause before the wallpaper resets when you lock the phone.\n\n" +
+                            "• What it solves:\n" +
+                            "If you see a glimpse of the wallpaper resetting/snapping back before the screen turns fully black, increase this value.\n\n" +
+                            "• Recommended:\n" +
+                            "0ms for Samsung/Most devices.\n" +
+                            "500ms - 800ms if you experience the glitch.\n\n" +
+                            "⚠️ Note: If this value is too high, unlocking immediately after locking might show the wallpaper in its previous state."
+                )
+                .setPositiveButton("Got it", null)
+                .show()
         }
 
 
