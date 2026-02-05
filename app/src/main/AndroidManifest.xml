@@ -32,7 +32,8 @@
             android:name=".EffectSelectionActivity" />
 
         <activity
-            android:name=".AdvancedSettingsActivity" />
+            android:name=".AdvancedSettingsActivity"
+            android:windowSoftInputMode="adjustResize"/>
 
         <service
             android:name=".AtmosphereService"
