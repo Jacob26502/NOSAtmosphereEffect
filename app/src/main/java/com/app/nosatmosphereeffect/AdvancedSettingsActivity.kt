@@ -31,7 +31,10 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val inputNoiseScale = findViewById<TextInputEditText>(R.id.inputNoiseScale)
         val inputNoiseStrength = findViewById<TextInputEditText>(R.id.inputNoiseStrength)
         val activeEffect = intent.getStringExtra("ACTIVE_EFFECT_TYPE") ?: "ORIGINAL"
+        val isSamsung = intent.getBooleanExtra("IS_SAMSUNG", false)
         val defaultDuration = if (activeEffect == "REVERSE") 1500L else 2500L
+        val defaultPoll = if (isSamsung) 30000L else 50L
+        val defaultDelay = if (isSamsung) 0L else 800L
 
         val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
@@ -40,8 +43,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val savedDelay = prefs.getLong("lock_delay", -1L)
         val savedDuration = prefs.getLong("anim_duration", -1L)
 
-        inputPoll.setText(if (savedPoll != -1L) savedPoll.toString() else "50")
-        inputDelay.setText(if (savedDelay != -1L) savedDelay.toString() else "0")
+        inputPoll.setText(if (savedPoll != -1L) savedPoll.toString() else defaultPoll.toString())
+        inputDelay.setText(if (savedDelay != -1L) savedDelay.toString() else defaultDelay.toString())
 
         // For duration, show what is currently saved, or leave empty/generic if using defaults
         if (savedDuration != -1L) {
@@ -99,8 +102,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
 
         btnApply.setOnClickListener {
-            val poll = inputPoll.text.toString().toLongOrNull() ?: 50L
-            val delay = inputDelay.text.toString().toLongOrNull() ?: 0L
+            val poll = inputPoll.text.toString().toLongOrNull() ?: defaultPoll
+            val delay = inputDelay.text.toString().toLongOrNull() ?: defaultDelay
             val duration = inputDuration.text.toString().toLongOrNull() ?: defaultDuration
             val enableNoise = switchNoise.isChecked
             val noiseScale = inputNoiseScale.text.toString().toFloatOrNull() ?: 2000.0f
@@ -129,12 +132,12 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             }
 
             // Visual reset
-            inputPoll.setText("50")
-            inputDelay.setText("0")
-            inputDuration.setText("2500")
+            inputPoll.setText(defaultPoll.toString())
+            inputDelay.setText(defaultDelay.toString())
+            inputDuration.setText(defaultDuration.toString())
             switchNoise.isChecked = false
             layoutNoise.visibility = View.GONE
-            inputNoiseScale.setText(defaultDuration.toString())
+            inputNoiseScale.setText("2000.0")
             inputNoiseStrength.setText("0.06")
 
             sendUpdateBroadcast()

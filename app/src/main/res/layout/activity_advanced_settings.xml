@@ -50,7 +50,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Lock Delay (ms)"
-            app:helperText="Recommended for\nOthers: 500ms | Samsung: 0ms"
+            app:helperText="Recommended for\nOthers: 800ms | Samsung: 0ms"
             app:helperTextTextColor="@color/white_alpha_70"
             app:endIconMode="custom"
             app:endIconDrawable="@drawable/ic_info"
