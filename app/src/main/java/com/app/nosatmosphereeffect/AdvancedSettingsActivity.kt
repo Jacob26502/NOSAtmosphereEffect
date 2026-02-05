@@ -42,7 +42,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             inputDuration.setText(savedDuration.toString())
         } else {
             // Leave empty or set a hint, usually easier to just show 2000 as a placeholder
-            inputDuration.setText("2000")
+            inputDuration.setText("2500")
         }
 
         switchNoise.isChecked = prefs.getBoolean("enable_noise", false)
@@ -64,7 +64,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         btnApply.setOnClickListener {
             val poll = inputPoll.text.toString().toLongOrNull() ?: 50L
             val delay = inputDelay.text.toString().toLongOrNull() ?: 0L
-            val duration = inputDuration.text.toString().toLongOrNull() ?: 2000L
+            val duration = inputDuration.text.toString().toLongOrNull() ?: 2500L
             val enableNoise = switchNoise.isChecked
             val noiseScale = inputNoiseScale.text.toString().toFloatOrNull() ?: 2000.0f
             val noiseStrength = inputNoiseStrength.text.toString().toFloatOrNull() ?: 0.06f
@@ -94,7 +94,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             // Visual reset
             inputPoll.setText("50")
             inputDelay.setText("0")
-            inputDuration.setText("2000")
+            inputDuration.setText("2500")
             switchNoise.isChecked = false
             layoutNoise.visibility = View.GONE
             inputNoiseScale.setText("2000.0")
