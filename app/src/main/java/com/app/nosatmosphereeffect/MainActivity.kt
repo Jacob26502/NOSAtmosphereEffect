@@ -3,6 +3,7 @@ package com.app.nosatmosphereeffect
 import android.app.WallpaperManager
 import android.content.Intent
 import android.os.Bundle
+import android.os.Build
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -25,6 +26,8 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
+        initializeSmartDefaults()
+
         layoutSettings = findViewById(R.id.layoutSettings)
         sliderDimness = findViewById(R.id.sliderDimness)
         btnUpdateDimness = findViewById(R.id.btnUpdateDimness)
@@ -36,7 +39,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnAdvanceSettings.setOnClickListener {
-            startActivity(Intent(this, AdvancedSettingsActivity::class.java))
+            val intent = Intent(this, AdvancedSettingsActivity::class.java)
+            val activeEffect = getActiveEffectType() ?: "ORIGINAL"
+            intent.putExtra("ACTIVE_EFFECT_TYPE", activeEffect)
+            intent.putExtra("IS_SAMSUNG", isSamsungDevice())
+            startActivity(intent)
         }
 
 
@@ -51,6 +58,29 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         checkWallpaperStatus()
+    }
+
+    private fun isSamsungDevice(): Boolean {
+        return Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+    }
+
+    private fun initializeSmartDefaults() {
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+
+        // Check if we have already set up defaults (check if poll_interval exists)
+        if (!prefs.contains("poll_interval")) {
+            val isSamsung = isSamsungDevice()
+
+            // Set optimal defaults based on device
+            val defaultPoll = if (isSamsung) 30000L else 50L
+            val defaultDelay = if (isSamsung) 0L else 800L
+
+            // Save immediately so Settings screen reads this next time
+            prefs.edit {
+                putLong("poll_interval", defaultPoll)
+                putLong("lock_delay", defaultDelay)
+            }
+        }
     }
 
     private fun checkWallpaperStatus() {

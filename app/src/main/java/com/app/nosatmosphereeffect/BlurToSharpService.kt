@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.opengl.GLSurfaceView
+import android.os.Build
 import android.view.animation.LinearInterpolator
 
 class BlurToSharpService : GLWallpaperService() {
@@ -20,8 +21,8 @@ class BlurToSharpService : GLWallpaperService() {
     }
 
     inner class AtmosphereEngine : GLEngine() {
-        private var pollInterval: Long = 50L
-        private var lockDelay: Long = 0L
+        private var pollInterval: Long = if (isSamsungDevice()) 30000L else 50L
+        private var lockDelay: Long = if (isSamsungDevice()) 0L else 800L
         private var animDuration: Long = 1500L
 
         private var myRenderer: BlurToSharpRenderer? = null
@@ -172,6 +173,10 @@ class BlurToSharpService : GLWallpaperService() {
             requestRender()
         }
 
+        private fun isSamsungDevice(): Boolean {
+            return Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+        }
+
         private fun updateRendererConfig() {
             val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
             val dim = prefs.getFloat("dim_level", 0.2f)
@@ -187,8 +192,8 @@ class BlurToSharpService : GLWallpaperService() {
             myRenderer?.enableNoise = noise
             myRenderer?.noiseScale = scale
             myRenderer?.noiseStrength = strength
-            pollInterval = if (savedPoll != -1L) savedPoll else 50L
-            lockDelay = if (savedDelay != -1L) savedDelay else 0L
+            pollInterval = if (savedPoll != -1L) savedPoll else if (isSamsungDevice()) 30000L else 50L
+            lockDelay = if (savedDelay != -1L) savedDelay else if (isSamsungDevice()) 0L else 800L
             animDuration = if (savedDuration != -1L) savedDuration else 1500L
         }
     }

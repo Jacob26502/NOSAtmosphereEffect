@@ -5,42 +5,49 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.card.MaterialCardView
+import androidx.recyclerview.widget.RecyclerView
 
 class EffectSelectionActivity : AppCompatActivity() {
 
-    private var selectedEffect: String = "ORIGINAL"
+    private var selectedEffectId: String = "ORIGINAL"
+
+    private val effectsList = listOf(
+        EffectItem(
+            id = "ORIGINAL",
+            title = "Original Atmosphere",
+            description = "Wake up: Sharp ➔ Blur\nDefault Nothing OS style."
+        ),
+        EffectItem(
+            id = "REVERSE",
+            title = "Reverse Atmosphere",
+            description = "Wake up: Blur ➔ Sharp\nStarts misty, then clears up."
+        )
+    )
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val intent = if (selectedEffect == "REVERSE") {
+            val intent = if (selectedEffectId == "REVERSE") {
                 Intent(this, BlurToSharpCropActivity::class.java)
             } else {
                 Intent(this, CropActivity::class.java)
             }
             intent.putExtra("IMAGE_URI", it.toString())
             startActivity(intent)
-
             finish()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_effect_selection)
 
-        val cardOriginal = findViewById<MaterialCardView>(R.id.cardEffectOriginal)
-        val cardReverse = findViewById<MaterialCardView>(R.id.cardEffectReverse)
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerEffects)
 
-        cardOriginal.setOnClickListener {
-            selectedEffect = "ORIGINAL"
+        val adapter = EffectsAdapter(effectsList) { item ->
+            selectedEffectId = item.id
             pickImage.launch("image/*")
         }
 
-        cardReverse.setOnClickListener {
-            selectedEffect = "REVERSE"
-            pickImage.launch("image/*")
-        }
+        recyclerView.adapter = adapter
     }
 }

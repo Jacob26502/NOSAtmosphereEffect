@@ -10,6 +10,8 @@ import androidx.core.content.edit
 import com.google.android.material.textfield.TextInputEditText
 import android.view.View
 import android.widget.LinearLayout
+import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class AdvancedSettingsActivity : AppCompatActivity() {
 
@@ -17,6 +19,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_advanced_settings)
 
+        val layoutPoll = findViewById<TextInputLayout>(R.id.layoutPollInterval)
+        val layoutDelay = findViewById<TextInputLayout>(R.id.layoutLockDelay)
         val inputPoll = findViewById<TextInputEditText>(R.id.inputPollInterval)
         val inputDelay = findViewById<TextInputEditText>(R.id.inputLockDelay)
         val inputDuration = findViewById<TextInputEditText>(R.id.inputAnimDuration)
@@ -26,6 +30,11 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val layoutNoise = findViewById<LinearLayout>(R.id.layoutNoiseSettings)
         val inputNoiseScale = findViewById<TextInputEditText>(R.id.inputNoiseScale)
         val inputNoiseStrength = findViewById<TextInputEditText>(R.id.inputNoiseStrength)
+        val activeEffect = intent.getStringExtra("ACTIVE_EFFECT_TYPE") ?: "ORIGINAL"
+        val isSamsung = intent.getBooleanExtra("IS_SAMSUNG", false)
+        val defaultDuration = if (activeEffect == "REVERSE") 1500L else 2500L
+        val defaultPoll = if (isSamsung) 30000L else 50L
+        val defaultDelay = if (isSamsung) 0L else 800L
 
         val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
@@ -34,15 +43,15 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val savedDelay = prefs.getLong("lock_delay", -1L)
         val savedDuration = prefs.getLong("anim_duration", -1L)
 
-        inputPoll.setText(if (savedPoll != -1L) savedPoll.toString() else "50")
-        inputDelay.setText(if (savedDelay != -1L) savedDelay.toString() else "0")
+        inputPoll.setText(if (savedPoll != -1L) savedPoll.toString() else defaultPoll.toString())
+        inputDelay.setText(if (savedDelay != -1L) savedDelay.toString() else defaultDelay.toString())
 
         // For duration, show what is currently saved, or leave empty/generic if using defaults
         if (savedDuration != -1L) {
             inputDuration.setText(savedDuration.toString())
         } else {
             // Leave empty or set a hint, usually easier to just show 2000 as a placeholder
-            inputDuration.setText("2000")
+            inputDuration.setText(defaultDuration.toString())
         }
 
         switchNoise.isChecked = prefs.getBoolean("enable_noise", false)
@@ -60,11 +69,42 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             layoutNoise.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
+        layoutPoll.setEndIconOnClickListener {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Unlock Check Interval")
+                .setMessage(
+                    "Controls how frequently the app checks if the device has been unlocked.\n\n" +
+                            "• What it solves:\n" +
+                            "If you unlock your phone and the animation starts after a delay, lower this value.\n\n" +
+                            "• Recommended:\n" +
+                            "30000ms for Samsung and most devices (Saves Battery).\n" +
+                            "50ms if you experience delayed animation start."
+                )
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
+        layoutDelay.setEndIconOnClickListener {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Lock Delay")
+                .setMessage(
+                    "Adds a pause before the wallpaper resets when you lock the phone.\n\n" +
+                            "• What it solves:\n" +
+                            "If you see a glimpse of the wallpaper resetting/snapping back before the screen turns fully black, increase this value.\n\n" +
+                            "• Recommended:\n" +
+                            "0ms for Samsung/Most devices.\n" +
+                            "500ms - 800ms if you experience the glitch.\n\n" +
+                            "⚠️ Note: If this value is too high, unlocking immediately after locking might show the wallpaper in its previous state."
+                )
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
 
         btnApply.setOnClickListener {
-            val poll = inputPoll.text.toString().toLongOrNull() ?: 50L
-            val delay = inputDelay.text.toString().toLongOrNull() ?: 0L
-            val duration = inputDuration.text.toString().toLongOrNull() ?: 2000L
+            val poll = inputPoll.text.toString().toLongOrNull() ?: defaultPoll
+            val delay = inputDelay.text.toString().toLongOrNull() ?: defaultDelay
+            val duration = inputDuration.text.toString().toLongOrNull() ?: defaultDuration
             val enableNoise = switchNoise.isChecked
             val noiseScale = inputNoiseScale.text.toString().toFloatOrNull() ?: 2000.0f
             val noiseStrength = inputNoiseStrength.text.toString().toFloatOrNull() ?: 0.06f
@@ -92,9 +132,9 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             }
 
             // Visual reset
-            inputPoll.setText("50")
-            inputDelay.setText("0")
-            inputDuration.setText("2000")
+            inputPoll.setText(defaultPoll.toString())
+            inputDelay.setText(defaultDelay.toString())
+            inputDuration.setText(defaultDuration.toString())
             switchNoise.isChecked = false
             layoutNoise.visibility = View.GONE
             inputNoiseScale.setText("2000.0")
