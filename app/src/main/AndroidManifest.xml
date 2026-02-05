@@ -12,6 +12,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.NOSAtmosphereEffect">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -20,14 +21,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".CropActivity" />
+
         <activity
             android:name=".BlurToSharpCropActivity" />
+
         <activity
             android:name=".EffectSelectionActivity" />
+
         <activity
             android:name=".AdvancedSettingsActivity" />
+
         <service
             android:name=".AtmosphereService"
             android:enabled="true"
@@ -41,6 +47,7 @@
                 android:name="android.service.wallpaper"
                 android:resource="@xml/wallpaper" />
         </service>
+
         <service
             android:name=".BlurToSharpService"
             android:enabled="true"

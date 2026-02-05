@@ -4,12 +4,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
-    android:padding="24dp">
+    android:fillViewport="true"
+    android:fitsSystemWindows="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal">
 
         <TextView
             android:layout_width="wrap_content"
@@ -18,6 +22,7 @@
             android:textColor="@color/white"
             android:textSize="24sp"
             android:textStyle="bold"
+            android:textAlignment="center"
             android:layout_marginBottom="32dp"/>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -84,21 +89,23 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:visibility="gone"> <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Noise Scale (Grain Size)"
-            app:helperText="Lower = Larger Grains. Recommended: 2000"
-            app:helperTextTextColor="@color/white_alpha_70"
-            android:layout_marginBottom="24dp"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputNoiseScale"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="numberDecimal"
-                android:textColor="@color/white"/>
-        </com.google.android.material.textfield.TextInputLayout>
+                android:hint="Noise Scale (Grain Size)"
+                app:helperText="Lower = Larger Grains. Recommended: 2000"
+                app:helperTextTextColor="@color/white_alpha_70"
+                android:layout_marginBottom="24dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputNoiseScale"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:textColor="@color/white"/>
+            </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -120,10 +127,11 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnApplyAdvanced"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
+            android:minHeight="56dp"
             android:text="Save &amp; Apply"
             android:layout_marginBottom="16dp"
-            app:cornerRadius="12dp"
+            app:cornerRadius="28dp"
             android:backgroundTint="@color/brand_primary"
             android:textColor="@color/brand_on_primary"/>
 
@@ -131,9 +139,10 @@
             android:id="@+id/btnResetDefaults"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
+            android:minHeight="56dp"
             android:text="Reset to Recommended"
-            app:cornerRadius="12dp"
+            app:cornerRadius="28dp"
             android:textColor="@color/white"
             app:strokeColor="@color/white_alpha_70"/>
 
