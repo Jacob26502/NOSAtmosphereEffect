@@ -176,7 +176,7 @@ class CropActivity : AppCompatActivity() {
 
     private fun showApplyDialog(bitmap: Bitmap) {
         val options = arrayOf("Set Static Lock Screen", "Save Copy to Gallery")
-        val checkedItems = booleanArrayOf(false, false)
+        val checkedItems = booleanArrayOf(true, false)
 
         MaterialAlertDialogBuilder(this)
             .setTitle("Apply Options")
