@@ -18,22 +18,22 @@ class EffectSelectionActivity : AppCompatActivity() {
         EffectItem(
             id = "ORIGINAL",
             title = "Original Atmosphere",
-            description = "Wake up: Sharp ➔ Blur\nDefault Nothing OS style."
+            description = "Wake up: Sharp ➔ Blur\nSignature style. Drifting ambient atmospheric clouds."
         ),
         EffectItem(
             id = "REVERSE",
             title = "Reverse Atmosphere",
-            description = "Wake up: Blur ➔ Sharp\nStarts misty, then clears up."
+            description = "Wake up: Blur ➔ Sharp\nMysterious reveal. Ambient clouds fade to a clear view."
         ),
         EffectItem(
             id = "FROSTED",
             title = "Simple Frosted",
-            description = "Wake up: Sharp ➔ Blur\nClean blur without atmosphere blobs."
+            description = "Wake up: Sharp ➔ Blur\nModern minimalism. A clean, uniform frosted glass layer."
         ),
         EffectItem(
             id = "FROSTED_REVERSE",
             title = "Simple Frosted (Reverse)",
-            description = "Wake up: Blur ➔ Sharp\nClean misty wake-up effect."
+            description = "Wake up: Blur ➔ Sharp\nElegant clarity. Heavy frost dissolves to crystal clear."
         )
     )
 
