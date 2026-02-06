@@ -16,8 +16,10 @@ Follow these steps to set up the effect properly on your device.
 
 Open the app and choose your desired atmosphere style from the selection screen:
 
-* **Original Atmosphere:** The wallpaper is original sharp image initially and then transitions to blurred version when unlocked (Classic Nothing OS style).
-* **Reverse Atmosphere:** The wallpaper is blurred initially and then sharpens back to original image when you unlock (Misty wake-up effect).
+* **Original Atmosphere:** Signature style. Drifting ambient atmospheric clouds that transition to blur when unlocked.
+* **Reverse Atmosphere:** Mysterious reveal. Deep ambient clouds fade to a sharp clear view when unlocked.
+* **Simple Frosted:** Modern minimalism. Applies a clean, uniform frosted glass blur (no clouds).
+* **Simple Frosted (Reverse):** Elegant clarity. Wakes up from a heavy frosted blur into a crystal clear wallpaper.
 
 ### 2\. Select & Align Image
 
@@ -27,7 +29,7 @@ After selecting an effect, pick an image from your gallery. Use gestures to pinc
 
 The setup process differs slightly depending on which effect you selected. Please follow the instructions for your chosen mode:
 
-#### 🅰️ If you chose "Original Atmosphere":
+#### 🅰️ If you chose "Sharp -> Blur Effect":
 
 1.  **Configure Options:** A dialog will appear with two checkboxes:
     * **Option 1: Set Static Lock Screen**
@@ -38,10 +40,10 @@ The setup process differs slightly depending on which effect you selected. Pleas
 2.  **Activate Live Wallpaper:**
     * The app will redirect you to the Android System's Live Wallpaper preview.
     * Tap **"Set Wallpaper"**.
-    * **MANDATORY:** You must select **ONLY "Home Screen"**.
+    * **MANDATORY:** You must select **ONLY "Home Screen"** (It'll also work fine for most of the devices if you select Home Screen and Lock Screen).
     * *> Why? The Original effect works by transitioning from a static Lock Screen image to the Live Wallpaper on the Home Screen.*
 
-#### 🅱️ If you chose "Reverse Atmosphere":
+#### 🅱️ If you chose "Blur -> Sharp Effect":
 
 1.  **Proceed to Preview:** You will be prompted to apply the wallpaper.
 2.  **Activate Live Wallpaper:**
@@ -49,11 +51,22 @@ The setup process differs slightly depending on which effect you selected. Pleas
     * Tap **"Set Wallpaper"**.
     * **MANDATORY:** You must select **"Home Screen and Lock Screen"**.
     * *> Why? The Reverse effect runs entirely as a live wallpaper to handle the blurred state while the phone is locked.*
+## Advanced Customization
+Take full control of the animation and look. You can now tweak the following settings dynamically:
+### Visual Adjustments
+* **Dimness Level:** Adjust the darkening overlay to ensure your home screen icons remain readable against bright wallpapers.
+* **Blur Strength:** (Frosted Effects Only) Use the slider to fine-tune the intensity of the blur radius, from a light mist to heavy glass.
+* **Experimental Grain (Noise):** Enable a film-grain texture on top of the blur. You can customize:
+* **Noise Strength:** How visible the grain is.
+* **Noise Scale:** The size/coarseness of the grain particles.
+### Animation & Behavior
+* **Animation Duration:** Control the total transition duration.
+* **Lock Delay (Anti-Flicker):** Adds a configurable pause before the wallpaper resets when you lock the phone. This prevents the visual glitch where the wallpaper "snaps" back to its initial state before the screen turns fully black.
+* **Unlock Check Interval:** Adjusts how frequently the app detects unlock events. Tuning this eliminates "delayed start" issues, ensuring the animation begins immediately when you wake your device.
 
 ## Known Issues
 
 * **Samsung Adaptive Clock:** As mentioned, programmatically setting the lock screen interferes with Samsung's Adaptive Clock on OneUI.
-* **Device Compatibility:** Only verified on S25 Ultra.
 
 ## Build & Installation
 
