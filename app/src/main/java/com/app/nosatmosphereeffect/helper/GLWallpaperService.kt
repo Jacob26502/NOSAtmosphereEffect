@@ -1,4 +1,4 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.helper
 
 import android.content.Context
 import android.opengl.GLSurfaceView

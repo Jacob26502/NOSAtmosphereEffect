@@ -1,17 +1,18 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.activity
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
-import com.google.android.material.textfield.TextInputEditText
-import android.view.View
-import android.widget.LinearLayout
-import com.google.android.material.textfield.TextInputLayout
+import com.app.nosatmosphereeffect.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class AdvancedSettingsActivity : AppCompatActivity() {
 
@@ -26,7 +27,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val inputDuration = findViewById<TextInputEditText>(R.id.inputAnimDuration)
         val btnApply = findViewById<Button>(R.id.btnApplyAdvanced)
         val btnReset = findViewById<Button>(R.id.btnResetDefaults)
-        val switchNoise = findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.switchNoise)
+        val switchNoise = findViewById<MaterialSwitch>(R.id.switchNoise)
         val layoutNoise = findViewById<LinearLayout>(R.id.layoutNoiseSettings)
         val inputNoiseScale = findViewById<TextInputEditText>(R.id.inputNoiseScale)
         val inputNoiseStrength = findViewById<TextInputEditText>(R.id.inputNoiseStrength)
@@ -36,7 +37,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val defaultPoll = if (isSamsung) 30000L else 50L
         val defaultDelay = if (isSamsung) 0L else 800L
 
-        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
 
         // Load existing values or show defaults in placeholder
         val savedPoll = prefs.getLong("poll_interval", -1L)

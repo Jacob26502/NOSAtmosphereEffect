@@ -1,4 +1,4 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.service
 
 import android.animation.ValueAnimator
 import android.app.KeyguardManager
@@ -8,33 +8,39 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.opengl.GLSurfaceView
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.view.SurfaceHolder
 import android.view.animation.LinearInterpolator
+import com.app.nosatmosphereeffect.helper.GLWallpaperService
+import com.app.nosatmosphereeffect.renderer.AtmosphereRenderer
 
-class BlurToSharpService : GLWallpaperService() {
+class AtmosphereService : GLWallpaperService() {
 
     override fun onCreateEngine(): Engine {
         return AtmosphereEngine()
     }
 
     override fun getRenderer(): GLSurfaceView.Renderer {
-        return BlurToSharpRenderer(applicationContext)
+        return AtmosphereRenderer(applicationContext)
     }
 
     inner class AtmosphereEngine : GLEngine() {
         private var pollInterval: Long = if (isSamsungDevice()) 30000L else 50L
         private var lockDelay: Long = if (isSamsungDevice()) 0L else 800L
-        private var animDuration: Long = 1500L
-
-        private var myRenderer: BlurToSharpRenderer? = null
+        private var animDuration: Long = 2500L
+        private var myRenderer: AtmosphereRenderer? = null
         private var blurAnimator: ValueAnimator? = null
         private var isLocked: Boolean = true
-        private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+        private val handler = Handler(Looper.getMainLooper())
+
         private val resetRunnable = Runnable {
             prepareForNextUnlock()
         }
         private val unlockChecker = object : Runnable {
             override fun run() {
-                val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
                 if (!keyguardManager.isKeyguardLocked) {
                     // BOOM! Device is unlocked. Trigger animation immediately.
                     isLocked = false
@@ -84,17 +90,15 @@ class BlurToSharpService : GLWallpaperService() {
             }
         }
 
-        override fun onCreate(surfaceHolder: android.view.SurfaceHolder) {
+        override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
 
-            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+            val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
             isLocked = keyguardManager.isKeyguardLocked
 
             val r = getRenderer()
-            if (r is BlurToSharpRenderer) {
+            if (r is AtmosphereRenderer) {
                 myRenderer = r
-                // Start completely blurred (1.0) for the lock screen
-                myRenderer?.blurStrength = 1.0f
                 updateRendererConfig()
                 setRenderer(myRenderer!!)
             }
@@ -107,7 +111,7 @@ class BlurToSharpService : GLWallpaperService() {
                 addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
             }
 
-            registerReceiver(systemEventReceiver, filter, Context.RECEIVER_EXPORTED)
+            registerReceiver(systemEventReceiver, filter, RECEIVER_EXPORTED)
         }
 
         override fun onDestroy() {
@@ -120,17 +124,14 @@ class BlurToSharpService : GLWallpaperService() {
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
             if (visible) {
-                val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-                if (keyguardManager.isKeyguardLocked) {
-                    isLocked = true
+                val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
+                if (!keyguardManager.isKeyguardLocked) {
+                    isLocked = false
                 }
-
                 if (isLocked) {
-                    // Lock Screen: Show full blur
-                    myRenderer?.blurStrength = 1.0f
+                    myRenderer?.blurStrength = 0.0f
                     requestRender()
                 } else {
-                    // Already unlocked: Show sharp image
                     snapToHomeState()
                 }
             }
@@ -140,12 +141,10 @@ class BlurToSharpService : GLWallpaperService() {
             val targetRenderer = myRenderer ?: return
 
             blurAnimator?.cancel()
-            // Ensure we start from the blurred state
-            targetRenderer.blurStrength = 1.0f
+            targetRenderer.blurStrength = 0.0f
             requestRender()
 
-            // REVERSE: Animate from 1.0 (Blur) down to 0.0 (Sharp)
-            blurAnimator = ValueAnimator.ofFloat(1.0f, 0.0f).apply {
+            blurAnimator = ValueAnimator.ofFloat(0.0f, 1.0f).apply {
                 duration = animDuration
                 interpolator = LinearInterpolator()
                 addUpdateListener { animator ->
@@ -160,16 +159,14 @@ class BlurToSharpService : GLWallpaperService() {
         private fun snapToHomeState() {
             val targetRenderer = myRenderer ?: return
             blurAnimator?.cancel()
-            // Home state is now 0.0 (Sharp)
-            targetRenderer.blurStrength = 0.0f
+            targetRenderer.blurStrength = 1.0f
             requestRender()
         }
 
         private fun prepareForNextUnlock() {
             val targetRenderer = myRenderer ?: return
             blurAnimator?.cancel()
-            // Reset to 1.0 (Blur) so it's ready when screen turns on
-            targetRenderer.blurStrength = 1.0f
+            targetRenderer.blurStrength = 0.0f
             requestRender()
         }
 
@@ -178,10 +175,11 @@ class BlurToSharpService : GLWallpaperService() {
         }
 
         private fun updateRendererConfig() {
-            val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
             val dim = prefs.getFloat("dim_level", 0.2f)
             myRenderer?.dimLevel = dim
 
+            // New Advanced Settings (Default to -1 to detect "not set")
             val savedPoll = prefs.getLong("poll_interval", -1L)
             val savedDelay = prefs.getLong("lock_delay", -1L)
             val savedDuration = prefs.getLong("anim_duration", -1L)
@@ -194,7 +192,7 @@ class BlurToSharpService : GLWallpaperService() {
             myRenderer?.noiseStrength = strength
             pollInterval = if (savedPoll != -1L) savedPoll else if (isSamsungDevice()) 30000L else 50L
             lockDelay = if (savedDelay != -1L) savedDelay else if (isSamsungDevice()) 0L else 800L
-            animDuration = if (savedDuration != -1L) savedDuration else 1500L
+            animDuration = if (savedDuration != -1L) savedDuration else 2500L
         }
     }
 }

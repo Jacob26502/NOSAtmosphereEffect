@@ -11,6 +11,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.slider.Slider
 import androidx.core.content.edit
+import com.app.nosatmosphereeffect.activity.AdvancedSettingsActivity
+import com.app.nosatmosphereeffect.activity.EffectSelectionActivity
+import com.app.nosatmosphereeffect.service.AtmosphereService
+import com.app.nosatmosphereeffect.service.BlurToSharpService
+import com.app.nosatmosphereeffect.service.FrostedReverseService
+import com.app.nosatmosphereeffect.service.FrostedService
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,6 +26,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnUpdateDimness: Button
     private lateinit var btnMainAction: Button
     private lateinit var btnAdvanceSettings: Button
+    private lateinit var cardBlurSettings: View
+    private lateinit var sliderBlurStrength: Slider
+    private lateinit var btnUpdateBlur: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +42,9 @@ class MainActivity : AppCompatActivity() {
         btnUpdateDimness = findViewById(R.id.btnUpdateDimness)
         btnMainAction = findViewById(R.id.btnMainAction)
         btnAdvanceSettings = findViewById(R.id.btnAdvanceSettings)
+        cardBlurSettings = findViewById(R.id.cardBlurSettings)
+        sliderBlurStrength = findViewById(R.id.sliderBlurStrength)
+        btnUpdateBlur = findViewById(R.id.btnUpdateBlur)
 
         btnMainAction.setOnClickListener {
             startActivity(Intent(this, EffectSelectionActivity::class.java))
@@ -52,6 +64,13 @@ class MainActivity : AppCompatActivity() {
         }
         btnUpdateDimness.setOnClickListener {
             applyDimnessUpdate()
+        }
+
+        sliderBlurStrength.addOnChangeListener { _, value, _ ->
+            updateBlurButtonState(value)
+        }
+        btnUpdateBlur.setOnClickListener {
+            applyBlurUpdate()
         }
     }
 
@@ -89,6 +108,12 @@ class MainActivity : AppCompatActivity() {
             btnMainAction.setText(R.string.action_change_effect)
             layoutSettings.visibility = View.VISIBLE
             loadCurrentDimness()
+            if (activeEffect.contains("FROSTED")) {
+                cardBlurSettings.visibility = View.VISIBLE
+                loadCurrentBlur()
+            } else {
+                cardBlurSettings.visibility = View.GONE
+            }
         } else {
             btnMainAction.setText(R.string.action_select_effect)
             layoutSettings.visibility = View.GONE
@@ -126,7 +151,6 @@ class MainActivity : AppCompatActivity() {
 
         Toast.makeText(this, "Wallpaper Updated!", Toast.LENGTH_SHORT).show()
     }
-
     private fun getActiveEffectType(): String? {
         val wm = WallpaperManager.getInstance(this)
         val info = wm.wallpaperInfo ?: return null
@@ -135,9 +159,35 @@ class MainActivity : AppCompatActivity() {
             return when (componentName) {
                 AtmosphereService::class.java.name -> "ORIGINAL"
                 BlurToSharpService::class.java.name -> "REVERSE"
+                FrostedService::class.java.name -> "FROSTED"
+                FrostedReverseService::class.java.name -> "FROSTED_REVERSE"
                 else -> null
             }
         }
         return null
+    }
+    private fun loadCurrentBlur() {
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val currentRadius = prefs.getFloat("frosted_blur_radius", 200f)
+        sliderBlurStrength.value = currentRadius
+        updateBlurButtonState(currentRadius)
+    }
+    private fun updateBlurButtonState(sliderValue: Float) {
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val saved = prefs.getFloat("frosted_blur_radius", 200f)
+        btnUpdateBlur.isEnabled = sliderValue != saved
+    }
+    private fun applyBlurUpdate() {
+        val newValue = sliderBlurStrength.value
+        getSharedPreferences("app_prefs", MODE_PRIVATE).edit {
+            putFloat("frosted_blur_radius", newValue)
+        }
+
+        val intent = Intent("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+        intent.setPackage(packageName)
+        sendBroadcast(intent)
+
+        btnUpdateBlur.isEnabled = false
+        Toast.makeText(this, "Blur Strength Updated!", Toast.LENGTH_SHORT).show()
     }
 }

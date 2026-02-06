@@ -1,4 +1,4 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.activity
 
 import android.content.Intent
 import android.net.Uri
@@ -6,6 +6,9 @@ import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
+import com.app.nosatmosphereeffect.helper.EffectItem
+import com.app.nosatmosphereeffect.helper.EffectsAdapter
+import com.app.nosatmosphereeffect.R
 
 class EffectSelectionActivity : AppCompatActivity() {
 
@@ -21,12 +24,22 @@ class EffectSelectionActivity : AppCompatActivity() {
             id = "REVERSE",
             title = "Reverse Atmosphere",
             description = "Wake up: Blur ➔ Sharp\nStarts misty, then clears up."
+        ),
+        EffectItem(
+            id = "FROSTED",
+            title = "Simple Frosted",
+            description = "Wake up: Sharp ➔ Blur\nClean blur without atmosphere blobs."
+        ),
+        EffectItem(
+            id = "FROSTED_REVERSE",
+            title = "Simple Frosted (Reverse)",
+            description = "Wake up: Blur ➔ Sharp\nClean misty wake-up effect."
         )
     )
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val intent = if (selectedEffectId == "REVERSE") {
+            val intent = if (selectedEffectId.contains("REVERSE")) {
                 Intent(this, BlurToSharpCropActivity::class.java)
             } else {
                 Intent(this, CropActivity::class.java)

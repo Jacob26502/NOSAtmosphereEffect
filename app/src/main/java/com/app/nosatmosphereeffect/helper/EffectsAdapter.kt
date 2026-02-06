@@ -1,10 +1,11 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.helper
 
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.app.nosatmosphereeffect.R
 
 data class EffectItem(
     val id: String,
