@@ -1,4 +1,4 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.helper
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -10,8 +10,9 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.appcompat.widget.AppCompatImageView
-import kotlin.math.max
 import androidx.core.graphics.createBitmap
+import kotlin.math.abs
+import kotlin.math.max
 
 class TouchImageView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
@@ -78,8 +79,8 @@ class TouchImageView @JvmOverloads constructor(
 
                 MotionEvent.ACTION_UP -> {
                     mode = 0
-                    val xDiff = kotlin.math.abs(curr.x - start.x).toInt()
-                    val yDiff = kotlin.math.abs(curr.y - start.y).toInt()
+                    val xDiff = abs(curr.x - start.x).toInt()
+                    val yDiff = abs(curr.y - start.y).toInt()
                     if (xDiff < 3 && yDiff < 3) performClick()
                 }
 

@@ -1,4 +1,4 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.renderer
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -10,19 +10,19 @@ import android.graphics.Paint
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.GLUtils
+import androidx.core.graphics.createBitmap
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.util.Random
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
-import androidx.core.graphics.createBitmap
-import java.util.Random
 
 class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
@@ -84,8 +84,8 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
             .put(vertices)
         vertexBuffer.position(0)
 
-        val vertexCode = loadShaderFromAssets("shaders/atmosphere.vert")
-        val fragmentCode = loadShaderFromAssets("shaders/atmosphere.frag")
+        val vertexCode = loadShaderFromAssets("shaders/atmosphere/atmosphere.vert")
+        val fragmentCode = loadShaderFromAssets("shaders/atmosphere/atmosphere.frag")
         programId = createProgram(vertexCode, fragmentCode)
 
         val blurFragCode = """
@@ -163,7 +163,10 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
                 if (processed[j]) continue
                 val other = tempClusters[j]
 
-                val colorDist = hypot((main.r - other.r).toFloat(), (main.g - other.g).toFloat()) + abs(main.b - other.b)
+                val colorDist = hypot(
+                    (main.r - other.r).toFloat(),
+                    (main.g - other.g).toFloat()
+                ) + abs(main.b - other.b)
                 val spatialDist = hypot(main.x - other.x, main.y - other.y)
 
                 if (colorDist < 90.0f && spatialDist < 0.25f) {

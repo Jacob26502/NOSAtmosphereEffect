@@ -12,10 +12,10 @@ android {
         val targetSdkEnv = project.findProperty("targetSdkOverride")?.toString()?.toIntOrNull() ?: 36
         targetSdk = targetSdkEnv
         minSdk = if (targetSdkEnv >= 36) 36 else 33
-        val baseVersionCode = 17
+        val baseVersionCode = 18
         val codeOffset = if (targetSdkEnv >= 36) 200000 else 100000
         versionCode = baseVersionCode + codeOffset
-        versionName = "4.2.0"
+        versionName = "4.3.1"
     }
 
     buildFeatures {

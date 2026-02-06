@@ -1,4 +1,4 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.activity
 
 import android.app.WallpaperManager
 import android.content.ComponentName
@@ -8,23 +8,30 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
-import androidx.exifinterface.media.ExifInterface
 import android.os.Bundle
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import androidx.exifinterface.media.ExifInterface
+import com.app.nosatmosphereeffect.MainActivity
+import com.app.nosatmosphereeffect.R
+import com.app.nosatmosphereeffect.helper.TouchImageView
+import com.app.nosatmosphereeffect.service.BlurToSharpService
+import com.app.nosatmosphereeffect.service.FrostedReverseService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
 class BlurToSharpCropActivity : AppCompatActivity() {
-
+    private var effectId: String = "REVERSE"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_crop_blur_to_sharp)
+
+        effectId = intent.getStringExtra("EFFECT_ID") ?: "REVERSE"
 
         val cropView = findViewById<TouchImageView>(R.id.cropImageView)
         val btnSave = findViewById<Button>(R.id.btnSaveCrop)
@@ -169,6 +176,12 @@ class BlurToSharpCropActivity : AppCompatActivity() {
 
         Thread {
             try {
+
+                getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+
                 saveFixedWallpaper(bitmap)
 
                 runOnUiThread {
@@ -203,14 +216,31 @@ class BlurToSharpCropActivity : AppCompatActivity() {
 
     private fun isServiceActive(): Boolean {
         val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo
-        return info != null && info.component.className == BlurToSharpService::class.java.name
+        val info = wm.wallpaperInfo ?: return false
+
+        val activeClass = info.component.className
+        val targetClass = if (effectId == "FROSTED_REVERSE") {
+            FrostedReverseService::class.java.name
+        } else {
+            BlurToSharpService::class.java.name
+        }
+
+        return activeClass == targetClass
     }
 
     private fun activateService() {
         try {
+            val serviceClass = if (effectId == "FROSTED_REVERSE") {
+                FrostedReverseService::class.java
+            } else {
+                BlurToSharpService::class.java
+            }
+
             val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
-            intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(this, BlurToSharpService::class.java))
+            intent.putExtra(
+                WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                ComponentName(this, serviceClass)
+            )
             startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()

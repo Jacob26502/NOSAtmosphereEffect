@@ -23,20 +23,20 @@
         </activity>
 
         <activity
-            android:name=".CropActivity" />
+            android:name=".activity.CropActivity" />
 
         <activity
-            android:name=".BlurToSharpCropActivity" />
+            android:name=".activity.BlurToSharpCropActivity" />
 
         <activity
-            android:name=".EffectSelectionActivity" />
+            android:name=".activity.EffectSelectionActivity" />
 
         <activity
-            android:name=".AdvancedSettingsActivity"
+            android:name=".activity.AdvancedSettingsActivity"
             android:windowSoftInputMode="adjustResize"/>
 
         <service
-            android:name=".AtmosphereService"
+            android:name=".service.AtmosphereService"
             android:enabled="true"
             android:exported="true"
             android:label="Atmosphere"
@@ -50,10 +50,38 @@
         </service>
 
         <service
-            android:name=".BlurToSharpService"
+            android:name=".service.BlurToSharpService"
             android:enabled="true"
             android:exported="true"
             android:label="Atmosphere (Reverse)"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/wallpaper" />
+        </service>
+
+        <service
+            android:name=".service.FrostedService"
+            android:enabled="true"
+            android:exported="true"
+            android:label="Frosted"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/wallpaper" />
+        </service>
+
+        <service
+            android:name=".service.FrostedReverseService"
+            android:enabled="true"
+            android:exported="true"
+            android:label="Frosted (Reverse)"
             android:permission="android.permission.BIND_WALLPAPER">
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />

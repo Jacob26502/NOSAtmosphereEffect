@@ -1,4 +1,4 @@
-package com.app.nosatmosphereeffect
+package com.app.nosatmosphereeffect.service
 
 import android.animation.ValueAnimator
 import android.app.KeyguardManager
@@ -7,44 +7,40 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.opengl.GLSurfaceView
-import android.view.animation.LinearInterpolator
 import android.os.Build
-import java.util.Locale
+import android.view.animation.LinearInterpolator
+import com.app.nosatmosphereeffect.helper.GLWallpaperService
+import com.app.nosatmosphereeffect.renderer.FrostedRenderer
 
-class AtmosphereService : GLWallpaperService() {
+class FrostedService : GLWallpaperService() {
 
     override fun onCreateEngine(): Engine {
-        return AtmosphereEngine()
+        return FrostedEngine()
     }
 
     override fun getRenderer(): GLSurfaceView.Renderer {
-        return AtmosphereRenderer(applicationContext)
+        return FrostedRenderer(applicationContext)
     }
 
-    inner class AtmosphereEngine : GLEngine() {
-        private var pollInterval: Long = if (isSamsungDevice()) 30000L else 50L
-        private var lockDelay: Long = if (isSamsungDevice()) 0L else 800L
-        private var animDuration: Long = 2500L
-        private var myRenderer: AtmosphereRenderer? = null
+    inner class FrostedEngine : GLEngine() {
+        private var pollInterval: Long = 50L
+        private var lockDelay: Long = 0L
+        private var animDuration: Long = 500L
+
+        private var myRenderer: FrostedRenderer? = null
         private var blurAnimator: ValueAnimator? = null
         private var isLocked: Boolean = true
-
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
-        private val resetRunnable = Runnable {
-            prepareForNextUnlock()
-        }
+        private val resetRunnable = Runnable { prepareForNextUnlock() }
         private val unlockChecker = object : Runnable {
             override fun run() {
                 val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                 if (!keyguardManager.isKeyguardLocked) {
-                    // BOOM! Device is unlocked. Trigger animation immediately.
                     isLocked = false
                     playUnlockAnimation()
-                    // Stop checking
                     handler.removeCallbacks(this)
                 } else {
-                    // Still locked, check again in 50ms
                     handler.postDelayed(this, pollInterval)
                 }
             }
@@ -54,19 +50,16 @@ class AtmosphereService : GLWallpaperService() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
                     Intent.ACTION_SCREEN_ON -> {
-                        // Screen turned on. Start watching for unlock immediately.
                         isLocked = true
                         handler.removeCallbacks(unlockChecker)
                         handler.post(unlockChecker)
                     }
                     Intent.ACTION_SCREEN_OFF -> {
-                        // Screen off. Stop watching (save battery) and reset state.
                         handler.removeCallbacks(unlockChecker)
                         isLocked = true
                         handler.postDelayed(resetRunnable, lockDelay)
                     }
                     Intent.ACTION_USER_PRESENT -> {
-                        // Backup: Keep this as a failsafe in case polling misses (rare)
                         handler.removeCallbacks(resetRunnable)
                         if (isLocked) {
                             isLocked = false
@@ -88,12 +81,8 @@ class AtmosphereService : GLWallpaperService() {
 
         override fun onCreate(surfaceHolder: android.view.SurfaceHolder) {
             super.onCreate(surfaceHolder)
-
-            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-            isLocked = keyguardManager.isKeyguardLocked
-
             val r = getRenderer()
-            if (r is AtmosphereRenderer) {
+            if (r is FrostedRenderer) {
                 myRenderer = r
                 updateRendererConfig()
                 setRenderer(myRenderer!!)
@@ -106,26 +95,22 @@ class AtmosphereService : GLWallpaperService() {
                 addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
                 addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
             }
-
             registerReceiver(systemEventReceiver, filter, Context.RECEIVER_EXPORTED)
         }
 
         override fun onDestroy() {
             super.onDestroy()
-            try {
-                unregisterReceiver(systemEventReceiver)
-            } catch (e: Exception) { }
+            try { unregisterReceiver(systemEventReceiver) } catch (e: Exception) { }
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
             if (visible) {
-                val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-                if (!keyguardManager.isKeyguardLocked) {
-                    isLocked = false
-                }
+                val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                if (!km.isKeyguardLocked) isLocked = false
+
                 if (isLocked) {
-                    myRenderer?.blurStrength = 0.0f
+                    myRenderer?.blurStrength = 0.0f // Locked = Sharp
                     requestRender()
                 } else {
                     snapToHomeState()
@@ -135,7 +120,6 @@ class AtmosphereService : GLWallpaperService() {
 
         private fun playUnlockAnimation() {
             val targetRenderer = myRenderer ?: return
-
             blurAnimator?.cancel()
             targetRenderer.blurStrength = 0.0f
             requestRender()
@@ -153,42 +137,33 @@ class AtmosphereService : GLWallpaperService() {
         }
 
         private fun snapToHomeState() {
-            val targetRenderer = myRenderer ?: return
-            blurAnimator?.cancel()
-            targetRenderer.blurStrength = 1.0f
+            myRenderer?.blurStrength = 1.0f // Unlocked = Blurred
             requestRender()
         }
 
         private fun prepareForNextUnlock() {
-            val targetRenderer = myRenderer ?: return
-            blurAnimator?.cancel()
-            targetRenderer.blurStrength = 0.0f
+            myRenderer?.blurStrength = 0.0f // Reset to Sharp
             requestRender()
-        }
-
-        private fun isSamsungDevice(): Boolean {
-            return Build.MANUFACTURER.equals("samsung", ignoreCase = true)
         }
 
         private fun updateRendererConfig() {
             val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-            val dim = prefs.getFloat("dim_level", 0.2f)
-            myRenderer?.dimLevel = dim
+            myRenderer?.dimLevel = prefs.getFloat("dim_level", 0.2f)
+            myRenderer?.enableNoise = prefs.getBoolean("enable_noise", false)
+            myRenderer?.noiseScale = prefs.getFloat("noise_scale", 2000.0f)
+            myRenderer?.noiseStrength = prefs.getFloat("noise_strength", 0.06f)
 
-            // New Advanced Settings (Default to -1 to detect "not set")
-            val savedPoll = prefs.getLong("poll_interval", -1L)
-            val savedDelay = prefs.getLong("lock_delay", -1L)
-            val savedDuration = prefs.getLong("anim_duration", -1L)
-            val noise = prefs.getBoolean("enable_noise", false)
-            val scale = prefs.getFloat("noise_scale", 2000.0f)
-            val strength = prefs.getFloat("noise_strength", 0.06f)
+            // Blur Slider
+            val savedRadius = prefs.getFloat("frosted_blur_radius", 200f)
+            if (myRenderer?.blurRadius != savedRadius) {
+                myRenderer?.blurRadius = savedRadius
+                myRenderer?.reloadTexture()
+            }
 
-            myRenderer?.enableNoise = noise
-            myRenderer?.noiseScale = scale
-            myRenderer?.noiseStrength = strength
-            pollInterval = if (savedPoll != -1L) savedPoll else if (isSamsungDevice()) 30000L else 50L
-            lockDelay = if (savedDelay != -1L) savedDelay else if (isSamsungDevice()) 0L else 800L
-            animDuration = if (savedDuration != -1L) savedDuration else 2500L
+            val isSamsung = Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+            pollInterval = prefs.getLong("poll_interval", if (isSamsung) 30000L else 50L)
+            lockDelay = prefs.getLong("lock_delay", if (isSamsung) 0L else 800L)
+            animDuration = prefs.getLong("anim_duration", 500L)
         }
     }
 }
