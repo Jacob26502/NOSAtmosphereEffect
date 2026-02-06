@@ -2,10 +2,12 @@ package com.app.nosatmosphereeffect.service
 
 import android.animation.ValueAnimator
 import android.app.KeyguardManager
+import android.app.WallpaperColors
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
 import android.opengl.GLSurfaceView
 import android.os.Build
 import android.os.Handler
@@ -14,6 +16,7 @@ import android.view.SurfaceHolder
 import android.view.animation.LinearInterpolator
 import com.app.nosatmosphereeffect.helper.GLWallpaperService
 import com.app.nosatmosphereeffect.renderer.BlurToSharpRenderer
+import java.io.File
 
 class BlurToSharpService : GLWallpaperService() {
 
@@ -36,6 +39,22 @@ class BlurToSharpService : GLWallpaperService() {
         private val handler = Handler(Looper.getMainLooper())
         private val resetRunnable = Runnable {
             prepareForNextUnlock()
+        }
+
+        override fun onComputeColors(): WallpaperColors? {
+            try {
+                val file = File(filesDir, "wallpaper.jpg")
+                if (file.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                    if (bitmap != null) {
+                        val colors = WallpaperColors.fromBitmap(bitmap)
+                        bitmap.recycle() // Clean up memory immediately
+                        return colors
+                    }
+                }
+            } catch (e: Exception) {
+            }
+            return super.onComputeColors()
         }
         private val unlockChecker = object : Runnable {
             override fun run() {
@@ -80,6 +99,7 @@ class BlurToSharpService : GLWallpaperService() {
                     "com.app.nosatmosphereeffect.RELOAD_WALLPAPER" -> {
                         myRenderer?.reloadTexture()
                         requestRender()
+                        notifyColorsChanged()
                     }
                     "com.app.nosatmosphereeffect.UPDATE_CONFIG" -> {
                         updateRendererConfig()

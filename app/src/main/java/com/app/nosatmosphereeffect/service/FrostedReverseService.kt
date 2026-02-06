@@ -2,15 +2,18 @@ package com.app.nosatmosphereeffect.service
 
 import android.animation.ValueAnimator
 import android.app.KeyguardManager
+import android.app.WallpaperColors
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
 import android.opengl.GLSurfaceView
 import android.os.Build
 import android.view.animation.LinearInterpolator
 import com.app.nosatmosphereeffect.helper.GLWallpaperService
 import com.app.nosatmosphereeffect.renderer.FrostedRenderer
+import java.io.File
 
 class FrostedReverseService : GLWallpaperService() {
 
@@ -33,6 +36,22 @@ class FrostedReverseService : GLWallpaperService() {
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
         private val resetRunnable = Runnable { prepareForNextUnlock() }
+
+        override fun onComputeColors(): WallpaperColors? {
+            try {
+                val file = File(filesDir, "wallpaper.jpg")
+                if (file.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                    if (bitmap != null) {
+                        val colors = WallpaperColors.fromBitmap(bitmap)
+                        bitmap.recycle() // Clean up memory immediately
+                        return colors
+                    }
+                }
+            } catch (e: Exception) {
+            }
+            return super.onComputeColors()
+        }
         private val unlockChecker = object : Runnable {
             override fun run() {
                 val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
@@ -70,6 +89,7 @@ class FrostedReverseService : GLWallpaperService() {
                     "com.app.nosatmosphereeffect.RELOAD_WALLPAPER" -> {
                         myRenderer?.reloadTexture()
                         requestRender()
+                        notifyColorsChanged()
                     }
                     "com.app.nosatmosphereeffect.UPDATE_CONFIG" -> {
                         updateRendererConfig()
