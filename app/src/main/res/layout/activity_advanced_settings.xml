@@ -74,7 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Animation Duration (ms)"
-            app:helperText="Recommended for\nOriginal: 2500ms | Reverse: 1500ms"
+            app:helperText="Recommended for\nOriginal: 2500ms | Reverse: 1500ms | Frosted: 500ms | Frosted Reverse: 500ms"
             app:helperTextTextColor="@color/white_alpha_70"
             android:layout_marginBottom="32dp"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">

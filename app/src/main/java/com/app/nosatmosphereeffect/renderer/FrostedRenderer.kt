@@ -21,17 +21,16 @@ import kotlin.math.max
 
 class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
-    // Animation State
-    @Volatile var blurStrength: Float = 0.0f
-
-    // User Settings
+    var blurStrength: Float = 0.0f
+        set(value) {
+            field = value
+        }
     @Volatile var dimLevel: Float = 0.2f
-    @Volatile var blurRadius: Float = 200f // Controlled by Slider
+    @Volatile private var needsReload: Boolean = false
     @Volatile var enableNoise: Boolean = false
     @Volatile var noiseScale: Float = 2000.0f
     @Volatile var noiseStrength: Float = 0.06f
-
-    @Volatile private var needsReload: Boolean = false
+    @Volatile var blurRadius: Float = 200.0f
 
     private var programId: Int = 0
     private var blurProgramId: Int = 0
@@ -60,9 +59,9 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
             .put(vertices)
         vertexBuffer.position(0)
 
-        // Reuse existing vertex shader, use new frosted fragment shader
         val vertexCode = loadShaderFromAssets("shaders/frostedBlur/frosted.vert")
         val fragmentCode = loadShaderFromAssets("shaders/frostedBlur/frosted.frag")
+
         programId = createProgram(vertexCode, fragmentCode)
 
         val blurFragCode = """
@@ -77,12 +76,9 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
                 vec2 texelSize = 1.0 / vec2(textureSize(uTexture, 0));
                 vec3 result = vec3(0.0);
                 float totalWeight = 0.0;
-                // Limit samples for performance, scale offset by radius
-                float samples = clamp(uRadius / 2.0, 5.0, 40.0); 
-                for(float i = -samples; i <= samples; i++) {
-                    float t = i / samples;
-                    vec2 offset = uDirection * t * (uRadius * 0.01); 
-                    float weight = 1.0 - abs(t);
+                for(float i = -uRadius; i <= uRadius; i++) {
+                    vec2 offset = uDirection * i * texelSize;
+                    float weight = 1.0 - abs(i) / uRadius;
                     result += texture(uTexture, vTexCoord + offset).rgb * weight;
                     totalWeight += weight;
                 }
@@ -107,15 +103,12 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         val sharpBitmap = loadFixedWallpaper()
         sharpTextureId = uploadTexture(sharpBitmap)
         tempTextureId = createEmptyTexture(sharpBitmap.width, sharpBitmap.height)
-
-        // Use the configurable blurRadius here
-        // If radius is 0, we can just use the sharp texture, but simpler to just process a minimal blur
-        val safeRadius = if (blurRadius < 1f) 1f else blurRadius
-
-        val blurredTextureId = gpuBlur(sharpTextureId, sharpBitmap.width, sharpBitmap.height, safeRadius)
+        val blurredTextureId = gpuBlur(sharpTextureId, sharpBitmap.width, sharpBitmap.height, blurRadius)
+        val blurredBitmap = downloadTexture(blurredTextureId, sharpBitmap.width, sharpBitmap.height)
 
         blurTextureId = blurredTextureId
         sharpBitmap.recycle()
+        blurredBitmap.recycle()
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -132,6 +125,11 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
         GLES30.glUseProgram(programId)
 
+        val t = blurStrength.coerceIn(0f, 1f)
+
+
+        // MOVEMENT CURVE: Fast Start, Slow Settle
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uAspectRatio"), aspectRatio)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uBlurStrength"), blurStrength)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uDimLevel"), dimLevel)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uEnableNoise"), if (enableNoise) 1.0f else 0.0f)
@@ -151,7 +149,6 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         drawQuad(aPosLoc, aTexLoc)
     }
 
-    // --- Helper functions (same as AtmosphereRenderer) ---
     private fun createEmptyTexture(width: Int, height: Int): Int {
         val t = IntArray(1); GLES30.glGenTextures(1, t, 0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, t[0])
@@ -169,8 +166,6 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         val aPosLoc = GLES30.glGetAttribLocation(blurProgramId, "aPosition")
         val aTexLoc = GLES30.glGetAttribLocation(blurProgramId, "aTexCoord")
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, fboId)
-
-        // Pass 1: Horizontal
         GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, tempTextureId, 0)
         GLES30.glViewport(0, 0, width, height)
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
@@ -179,13 +174,10 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES30.glUniform2f(GLES30.glGetUniformLocation(blurProgramId, "uDirection"), 1f, 0f)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(blurProgramId, "uRadius"), radius)
         drawQuad(aPosLoc, aTexLoc)
-
-        // Pass 2: Vertical
         GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, outputTexture, 0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, tempTextureId)
         GLES30.glUniform2f(GLES30.glGetUniformLocation(blurProgramId, "uDirection"), 0f, 1f)
         drawQuad(aPosLoc, aTexLoc)
-
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
         return outputTexture
     }
@@ -200,6 +192,18 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, 4)
         GLES30.glDisableVertexAttribArray(aPosLoc)
         GLES30.glDisableVertexAttribArray(aTexLoc)
+    }
+
+    private fun downloadTexture(textureId: Int, width: Int, height: Int): Bitmap {
+        val buffer = ByteBuffer.allocateDirect(width * height * 4)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, fboId)
+        GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, textureId, 0)
+        GLES30.glReadPixels(0, 0, width, height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+        val bitmap = createBitmap(width, height)
+        buffer.rewind()
+        bitmap.copyPixelsFromBuffer(buffer)
+        return bitmap
     }
 
     private fun uploadTexture(bitmap: Bitmap): Int {
@@ -247,8 +251,10 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
             rawBitmap.eraseColor(color)
         }
         val metrics = context.resources.displayMetrics
+
         val screenWidth = metrics.widthPixels
         val screenHeight = metrics.heightPixels
+
         val width = rawBitmap.width
         val height = rawBitmap.height
         val targetW = screenWidth.coerceAtMost(1440)
@@ -264,4 +270,5 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         if (rawBitmap != finalBitmap) rawBitmap.recycle()
         return finalBitmap
     }
+
 }
