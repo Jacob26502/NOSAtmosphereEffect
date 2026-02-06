@@ -20,28 +20,20 @@ float random(vec2 co) {
 }
 
 void main() {
-    float t = uBlurStrength;
-    vec2 uv = vTexCoord;
-    uv.x *= uAspectRatio;
+    float t = clamp(uBlurStrength, 0.0, 1.0);
 
-    // --- 2. Compose Base Background ---
-    // Phase 1: Sharp -> Frosted (0.0 to 1.0)
-    float blurPhase = smoothstep(0.0, 1.0, t);
+    vec3 sharp = textureLod(uTextureSharp, vTexCoord, t * 4.0).rgb;
 
-
-    vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
     vec3 frosted = texture(uTextureBlur, vTexCoord).rgb;
 
-    // Start with Sharp -> Frosted
-    vec3 currentBg = mix(sharp, frosted, blurPhase);
-
-    // --- 3. Blob Layering (The "Old Good Way") ---
-    vec3 finalColor = currentBg;
+    vec3 finalColor = mix(sharp, frosted, t);
 
     finalColor = mix(finalColor, vec3(0.0), uDimLevel * t);
 
     if (uEnableNoise > 0.5) {
-        vec2 grainUV = floor(uv * uNoiseScale);
+        vec2 noiseUV = vTexCoord;
+        noiseUV.x *= uAspectRatio;
+        vec2 grainUV = floor(noiseUV * uNoiseScale);
         float noise = random(grainUV);
         float noiseVisibility = smoothstep(0.4, 1.0, t);
         finalColor += vec3(noise * uNoiseStrength * noiseVisibility);

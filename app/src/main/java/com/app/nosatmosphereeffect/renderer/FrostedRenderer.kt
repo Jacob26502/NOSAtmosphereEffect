@@ -103,12 +103,14 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         val sharpBitmap = loadFixedWallpaper()
         sharpTextureId = uploadTexture(sharpBitmap)
         tempTextureId = createEmptyTexture(sharpBitmap.width, sharpBitmap.height)
-        val blurredTextureId = gpuBlur(sharpTextureId, sharpBitmap.width, sharpBitmap.height, blurRadius)
-        val blurredBitmap = downloadTexture(blurredTextureId, sharpBitmap.width, sharpBitmap.height)
-
+        val blurredTextureId: Int
+        if (blurRadius < 1.0f) {
+            blurredTextureId = uploadTexture(sharpBitmap)
+        } else {
+            blurredTextureId = gpuBlur(sharpTextureId, sharpBitmap.width, sharpBitmap.height, blurRadius)
+        }
         blurTextureId = blurredTextureId
         sharpBitmap.recycle()
-        blurredBitmap.recycle()
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -172,7 +174,8 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTexture)
         GLES30.glUniform1i(GLES30.glGetUniformLocation(blurProgramId, "uTexture"), 0)
         GLES30.glUniform2f(GLES30.glGetUniformLocation(blurProgramId, "uDirection"), 1f, 0f)
-        GLES30.glUniform1f(GLES30.glGetUniformLocation(blurProgramId, "uRadius"), radius)
+        val safeRadius = if (radius < 1f) 1f else radius
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(blurProgramId, "uRadius"), safeRadius)
         drawQuad(aPosLoc, aTexLoc)
         GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, outputTexture, 0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, tempTextureId)
@@ -194,27 +197,16 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES30.glDisableVertexAttribArray(aTexLoc)
     }
 
-    private fun downloadTexture(textureId: Int, width: Int, height: Int): Bitmap {
-        val buffer = ByteBuffer.allocateDirect(width * height * 4)
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, fboId)
-        GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, textureId, 0)
-        GLES30.glReadPixels(0, 0, width, height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-        val bitmap = createBitmap(width, height)
-        buffer.rewind()
-        bitmap.copyPixelsFromBuffer(buffer)
-        return bitmap
-    }
-
     private fun uploadTexture(bitmap: Bitmap): Int {
         val textureHandle = IntArray(1)
         GLES30.glGenTextures(1, textureHandle, 0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureHandle[0])
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR_MIPMAP_LINEAR)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
         GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
+        GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
         return textureHandle[0]
     }
 
