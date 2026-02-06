@@ -213,6 +213,12 @@ class CropActivity : AppCompatActivity() {
 
         Thread {
             try {
+
+                getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+
                 saveFixedWallpaper(bitmap)
 
                 if (saveToGallery) {
