@@ -45,6 +45,7 @@ class EffectSelectionActivity : AppCompatActivity() {
                 Intent(this, CropActivity::class.java)
             }
             intent.putExtra("IMAGE_URI", it.toString())
+            intent.putExtra("EFFECT_ID", selectedEffectId)
             startActivity(intent)
             finish()
         }

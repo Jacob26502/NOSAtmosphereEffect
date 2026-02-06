@@ -22,17 +22,20 @@ import com.app.nosatmosphereeffect.MainActivity
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.TouchImageView
 import com.app.nosatmosphereeffect.service.AtmosphereService
+import com.app.nosatmosphereeffect.service.FrostedService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
 class CropActivity : AppCompatActivity() {
-
+    private var effectId: String = "ORIGINAL" // Default
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_crop)
+
+        effectId = intent.getStringExtra("EFFECT_ID") ?: "ORIGINAL"
 
         val cropView = findViewById<TouchImageView>(R.id.cropImageView)
         val btnSave = findViewById<Button>(R.id.btnSaveCrop)
@@ -299,16 +302,30 @@ class CropActivity : AppCompatActivity() {
 
     private fun isServiceActive(): Boolean {
         val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo
-        return info != null && info.component.className == AtmosphereService::class.java.name
+        val info = wm.wallpaperInfo ?: return false
+
+        val activeClass = info.component.className
+        val targetClass = if (effectId == "FROSTED") {
+            FrostedService::class.java.name
+        } else {
+            AtmosphereService::class.java.name
+        }
+
+        return activeClass == targetClass
     }
 
     private fun activateService() {
         try {
+            val serviceClass = if (effectId == "FROSTED") {
+                FrostedService::class.java
+            } else {
+                AtmosphereService::class.java
+            }
+
             val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
             intent.putExtra(
                 WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
-                ComponentName(this, AtmosphereService::class.java)
+                ComponentName(this, serviceClass)
             )
             startActivity(intent)
         } catch (e: Exception) {
