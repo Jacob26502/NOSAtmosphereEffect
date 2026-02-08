@@ -3,10 +3,7 @@ package com.app.nosatmosphereeffect.renderer
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Matrix
-import android.graphics.Paint
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.GLUtils
@@ -17,7 +14,6 @@ import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.max
 
 class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
@@ -233,34 +229,16 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
     private fun loadFixedWallpaper(): Bitmap {
         val file = File(context.filesDir, "wallpaper.jpg")
-        var rawBitmap: Bitmap? = null
         if (file.exists()) {
-            try { rawBitmap = BitmapFactory.decodeFile(file.absolutePath) } catch (e: Exception) { e.printStackTrace() }
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+            if (bitmap != null) {
+                return bitmap
+            }
         }
-        if (rawBitmap == null) {
-            val color = Color.BLUE
-            rawBitmap = createBitmap(1080, 1920)
-            rawBitmap.eraseColor(color)
-        }
-        val metrics = context.resources.displayMetrics
 
-        val screenWidth = metrics.widthPixels
-        val screenHeight = metrics.heightPixels
-
-        val width = rawBitmap.width
-        val height = rawBitmap.height
-        val targetW = screenWidth.coerceAtMost(1440)
-        val targetH = (targetW.toFloat() / screenWidth * screenHeight).toInt()
-        val finalBitmap = createBitmap(targetW, targetH)
-        val canvas = Canvas(finalBitmap)
-        val matrix = Matrix()
-        val safeScale = max(targetW.toFloat() / width, targetH.toFloat() / height)
-        matrix.postScale(safeScale, safeScale)
-        matrix.postTranslate((targetW - width * safeScale) / 2f, (targetH - height * safeScale) / 2f)
-        val paint = Paint(Paint.FILTER_BITMAP_FLAG)
-        canvas.drawBitmap(rawBitmap, matrix, paint)
-        if (rawBitmap != finalBitmap) rawBitmap.recycle()
-        return finalBitmap
+        val fallback = createBitmap(1080, 1920)
+        fallback.eraseColor(Color.BLUE)
+        return fallback
     }
 
 }
