@@ -9,8 +9,8 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import android.view.WindowManager
 import androidx.appcompat.widget.AppCompatImageView
-import androidx.core.graphics.createBitmap
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -29,6 +29,10 @@ class TouchImageView @JvmOverloads constructor(
     // View dimensions
     private var viewWidth = 0f
     private var viewHeight = 0f
+
+    // Target dimensions (Physical Screen 1:1 size)
+    private var targetWidth = 0
+    private var targetHeight = 0
 
     // Image dimensions (original)
     private var origWidth = 0f
@@ -49,6 +53,13 @@ class TouchImageView @JvmOverloads constructor(
         scaleType = ScaleType.MATRIX
         imageMatrix = matrixCurrent
 
+        // --- 1. CAPTURE REAL SCREEN SIZE ---
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+        val metrics = windowManager.currentWindowMetrics
+        targetWidth = metrics.bounds.width()
+        targetHeight = metrics.bounds.height()
+
         setOnTouchListener { _, event ->
             scaleDetector.onTouchEvent(event)
             gestureDetector.onTouchEvent(event)
@@ -67,7 +78,6 @@ class TouchImageView @JvmOverloads constructor(
                         val deltaX = curr.x - last.x
                         val deltaY = curr.y - last.y
 
-                        // Apply drag, but 'fixTrans' will stop it if it goes out of bounds
                         val fixTransX = getFixDragTrans(deltaX, viewWidth, origWidth * saveScale)
                         val fixTransY = getFixDragTrans(deltaY, viewHeight, origHeight * saveScale)
 
@@ -92,34 +102,31 @@ class TouchImageView @JvmOverloads constructor(
         }
     }
 
-    // 1. Setup the image to FILL the screen (Center Crop style)
+    // --- 2. SETUP IMAGE TO FILL SCREEN RESOLUTION ---
     fun setInitialImage(bitmap: Bitmap) {
         super.setImageBitmap(bitmap)
         origWidth = bitmap.width.toFloat()
         origHeight = bitmap.height.toFloat()
 
-        // We wait for the view to layout to know its real size
         post {
+            // We use the view's actual layout size for bounds checking
             viewWidth = width.toFloat()
             viewHeight = height.toFloat()
 
-            // Calculate scale to COVER the screen
-            val scaleX = viewWidth / origWidth
-            val scaleY = viewHeight / origHeight
+            val scaleX = targetWidth.toFloat() / origWidth
+            val scaleY = targetHeight.toFloat() / origHeight
 
             // "max" ensures we fill the screen (Center Crop)
             val scale = max(scaleX, scaleY)
 
             matrixCurrent.setScale(scale, scale)
 
-            // Center it
+            // Center the image in the view
             val redundantYSpace = viewHeight - (scale * origHeight)
             val redundantXSpace = viewWidth - (scale * origWidth)
             matrixCurrent.postTranslate(redundantXSpace / 2, redundantYSpace / 2)
 
             saveScale = scale
-
-            // IMPORTANT: Set minScale so user can't zoom out smaller than screen
             minScale = scale
 
             imageMatrix = matrixCurrent
@@ -127,16 +134,15 @@ class TouchImageView @JvmOverloads constructor(
         }
     }
 
-    // 2. Capture exactly what the user sees
+
     fun getCroppedBitmap(): Bitmap {
-        val bitmap = createBitmap(width, height)
+        val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         draw(canvas)
         return bitmap
     }
 
     // --- BOUNDS CHECKING LOGIC ---
-
     private fun fixTrans() {
         matrixCurrent.getValues(m)
         val transX = m[Matrix.MTRANS_X]
@@ -174,7 +180,7 @@ class TouchImageView @JvmOverloads constructor(
     // --- SCALE LISTENER (Pinch to Zoom) ---
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-            mode = 2 // ZOOM
+            mode = 2
             return true
         }
 
@@ -183,7 +189,6 @@ class TouchImageView @JvmOverloads constructor(
             val origScale = saveScale
             saveScale *= mScaleFactor
 
-            // Don't let them zoom out smaller than the screen (minScale)
             if (saveScale < minScale) {
                 saveScale = minScale
                 mScaleFactor = minScale / origScale
@@ -205,7 +210,27 @@ class TouchImageView @JvmOverloads constructor(
 
     private inner class GestureListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            // Optional: Double tap to reset
+            val origScale = saveScale
+            var targetScale: Float
+            if (saveScale > minScale) {
+                targetScale = minScale
+            } else {
+                targetScale = (minScale * 2f).coerceAtMost(maxScale)
+                if (targetScale == minScale) targetScale = maxScale
+            }
+
+            saveScale = targetScale
+            val scaleFactor = targetScale / origScale
+
+            if (targetScale == minScale) {
+                matrixCurrent.postScale(scaleFactor, scaleFactor, viewWidth / 2, viewHeight / 2)
+            } else {
+                matrixCurrent.postScale(scaleFactor, scaleFactor, e.x, e.y)
+            }
+
+            fixTrans()
+            imageMatrix = matrixCurrent
+
             return true
         }
     }
