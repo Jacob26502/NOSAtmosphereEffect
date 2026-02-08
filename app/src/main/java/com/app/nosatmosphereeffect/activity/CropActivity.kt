@@ -12,12 +12,13 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -36,6 +37,7 @@ class CropActivity : AppCompatActivity() {
     private var effectId: String = "ORIGINAL" // Default
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
@@ -55,8 +57,11 @@ class CropActivity : AppCompatActivity() {
 
         btnSave.setText(R.string.action_apply)
 
-        val uriString = intent.getStringExtra("IMAGE_URI") ?: return
-        val uri = uriString.toUri()
+        val uri = intent.data ?: run {
+            Toast.makeText(this, "No Image Data Found", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
         // Use a background thread to load heavy images to prevent UI freeze
         Thread {
@@ -73,7 +78,6 @@ class CropActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 runOnUiThread {
                     Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                     finish()
@@ -119,10 +123,12 @@ class CropActivity : AppCompatActivity() {
             return handleExifRotation(context, uri, rawBitmap)
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
             return null
         } finally {
-            try { inputStream?.close() } catch (e: Exception) {}
+            try { inputStream?.close() } catch (e: Exception) {Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()}
         }
     }
 
@@ -162,8 +168,10 @@ class CropActivity : AppCompatActivity() {
             return rotatedBitmap
 
         } catch (e: Exception) {
-            e.printStackTrace()
-            return bitmap // Return original if Exif fails
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+            return bitmap
         } finally {
             inputStream?.close()
         }
@@ -173,24 +181,25 @@ class CropActivity : AppCompatActivity() {
         val (height: Int, width: Int) = options.run { outHeight to outWidth }
         var inSampleSize = 1
 
-        // Calculate the largest inSampleSize value that is a power of 2 and keeps both
-        // height and width STRICTLY UNDER the requested height and width.
-        // This protects against texture limits (e.g., 4096 or 8192).
-        if (height > reqHeight || width > reqWidth) {
-            val halfHeight: Int = height / 2
-            val halfWidth: Int = width / 2
+        // 1. Find the largest dimension of the original image
+        val maxImageDimension = kotlin.math.max(height, width)
 
-            // FIX: Loop until dimensions are smaller than or equal to requested size
-            while ((halfHeight / inSampleSize) >= reqHeight || (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2
-            }
+        // 2. Find the texture limit (e.g., 4096)
+        // Take the min of reqWidth/Height to ensure we stay within the strictest limit provided
+        val maxTextureSize = kotlin.math.min(reqWidth, reqHeight)
 
-            // Extra check: Ensure the final result fits within max texture size (4096 is a safe bet)
-            // If the loop stopped but we are still exactly at 4096+ on one edge, bump it once more if needed.
-            while ((height / inSampleSize) > reqHeight || (width / inSampleSize) > reqWidth) {
+        // 3. Only scale if the image is actually larger than the limit
+        if (maxImageDimension > maxTextureSize) {
+
+            // 4. Calculate the Factor: How many times larger is the image?
+            val factor = maxImageDimension.toFloat() / maxTextureSize.toFloat()
+
+            // 5. Find the nearest Power of 2 that covers this factor
+            while (inSampleSize < factor) {
                 inSampleSize *= 2
             }
         }
+
         return inSampleSize
     }
 
@@ -259,7 +268,6 @@ class CropActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 runOnUiThread {
                     Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
@@ -290,7 +298,7 @@ class CropActivity : AppCompatActivity() {
                     contentResolver.delete(deleteUri, null, null)
                 }
             }
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) { Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
     }
 
     private fun saveToPublicGallery(bitmap: Bitmap) {
@@ -316,7 +324,7 @@ class CropActivity : AppCompatActivity() {
                 contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
                 resolver.update(uri, contentValues, null, null)
             }
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) { Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
     }
 
     private fun isServiceActive(): Boolean {
@@ -348,7 +356,6 @@ class CropActivity : AppCompatActivity() {
             )
             startActivity(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
             val intent = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)
             startActivity(intent)
         } finally {
