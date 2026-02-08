@@ -9,14 +9,10 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
-import android.view.WindowManager
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.exifinterface.media.ExifInterface
 import com.app.nosatmosphereeffect.MainActivity
 import com.app.nosatmosphereeffect.R
@@ -32,17 +28,8 @@ class BlurToSharpCropActivity : AppCompatActivity() {
     private var effectId: String = "REVERSE"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
-        val windowController = WindowCompat.getInsetsController(window, window.decorView)
-        windowController.isAppearanceLightStatusBars = false
-        windowController.isAppearanceLightNavigationBars = false
-
-        windowController.hide(WindowInsetsCompat.Type.systemBars())
-        windowController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-
-        setContentView(R.layout.activity_crop_blur_to_sharp)
+        setContentView(R.layout.activity_crop)
 
         effectId = intent.getStringExtra("EFFECT_ID") ?: "REVERSE"
 
