@@ -12,12 +12,13 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -56,8 +57,11 @@ class CropActivity : AppCompatActivity() {
 
         btnSave.setText(R.string.action_apply)
 
-        val uriString = intent.getStringExtra("IMAGE_URI") ?: return
-        val uri = uriString.toUri()
+        val uri = intent.data ?: run {
+            Toast.makeText(this, "No Image Data Found", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
         // Use a background thread to load heavy images to prevent UI freeze
         Thread {
@@ -119,6 +123,9 @@ class CropActivity : AppCompatActivity() {
             return handleExifRotation(context, uri, rawBitmap)
 
         } catch (e: Exception) {
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
             return null
         } finally {
             try { inputStream?.close() } catch (e: Exception) {Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()}
@@ -161,8 +168,10 @@ class CropActivity : AppCompatActivity() {
             return rotatedBitmap
 
         } catch (e: Exception) {
-            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-            return bitmap // Return original if Exif fails
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+            return bitmap
         } finally {
             inputStream?.close()
         }

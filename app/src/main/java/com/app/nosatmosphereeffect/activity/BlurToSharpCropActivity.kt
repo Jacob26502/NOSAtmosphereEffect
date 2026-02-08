@@ -9,11 +9,12 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -52,8 +53,11 @@ class BlurToSharpCropActivity : AppCompatActivity() {
 
         btnSave.setText(R.string.action_apply)
 
-        val uriString = intent.getStringExtra("IMAGE_URI") ?: return
-        val uri = uriString.toUri()
+        val uri = intent.data ?: run {
+            Toast.makeText(this, "No Image Data Found", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
         Thread {
             try {
@@ -101,6 +105,9 @@ class BlurToSharpCropActivity : AppCompatActivity() {
             return handleExifRotation(context, uri, rawBitmap)
 
         } catch (e: Exception) {
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
             return null
         } finally {
             try { inputStream?.close() } catch (e: Exception) {Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()}
@@ -140,7 +147,9 @@ class BlurToSharpCropActivity : AppCompatActivity() {
             return rotatedBitmap
 
         } catch (e: Exception) {
-            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
             return bitmap
         } finally {
             inputStream?.close()
