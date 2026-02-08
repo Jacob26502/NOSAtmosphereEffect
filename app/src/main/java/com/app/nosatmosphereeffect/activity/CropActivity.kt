@@ -74,7 +74,6 @@ class CropActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 runOnUiThread {
                     Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                     finish()
@@ -120,10 +119,10 @@ class CropActivity : AppCompatActivity() {
             return handleExifRotation(context, uri, rawBitmap)
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             return null
         } finally {
-            try { inputStream?.close() } catch (e: Exception) {}
+            try { inputStream?.close() } catch (e: Exception) {Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()}
         }
     }
 
@@ -163,7 +162,7 @@ class CropActivity : AppCompatActivity() {
             return rotatedBitmap
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             return bitmap // Return original if Exif fails
         } finally {
             inputStream?.close()
@@ -260,7 +259,6 @@ class CropActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 runOnUiThread {
                     Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
@@ -291,7 +289,7 @@ class CropActivity : AppCompatActivity() {
                     contentResolver.delete(deleteUri, null, null)
                 }
             }
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) { Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
     }
 
     private fun saveToPublicGallery(bitmap: Bitmap) {
@@ -317,7 +315,7 @@ class CropActivity : AppCompatActivity() {
                 contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
                 resolver.update(uri, contentValues, null, null)
             }
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) { Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
     }
 
     private fun isServiceActive(): Boolean {
@@ -349,7 +347,6 @@ class CropActivity : AppCompatActivity() {
             )
             startActivity(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
             val intent = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)
             startActivity(intent)
         } finally {

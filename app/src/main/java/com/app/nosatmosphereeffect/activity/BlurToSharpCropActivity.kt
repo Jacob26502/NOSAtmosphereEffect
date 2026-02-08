@@ -67,7 +67,6 @@ class BlurToSharpCropActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 runOnUiThread {
                     Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                     finish()
@@ -102,10 +101,10 @@ class BlurToSharpCropActivity : AppCompatActivity() {
             return handleExifRotation(context, uri, rawBitmap)
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             return null
         } finally {
-            try { inputStream?.close() } catch (e: Exception) {}
+            try { inputStream?.close() } catch (e: Exception) {Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()}
         }
     }
 
@@ -142,7 +141,7 @@ class BlurToSharpCropActivity : AppCompatActivity() {
             return rotatedBitmap
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             return bitmap
         } finally {
             inputStream?.close()
@@ -211,7 +210,6 @@ class BlurToSharpCropActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 runOnUiThread {
                     Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
@@ -257,7 +255,6 @@ class BlurToSharpCropActivity : AppCompatActivity() {
             )
             startActivity(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
             val intent = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)
             startActivity(intent)
         } finally {
