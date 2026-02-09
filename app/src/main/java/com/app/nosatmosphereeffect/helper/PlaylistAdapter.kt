@@ -47,7 +47,9 @@ class PlaylistAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
 
-        // Load image asynchronously
+        // Clear the current image to prevent showing the old one during load
+        holder.imgThumbnail.setImageBitmap(null)
+
         val uriToLoad = if (item.isEdited && item.editedFilePath != null) {
             Uri.parse("file://${item.editedFilePath}")
         } else {

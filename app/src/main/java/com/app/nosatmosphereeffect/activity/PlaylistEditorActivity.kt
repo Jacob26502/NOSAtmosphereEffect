@@ -42,11 +42,14 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
     // Handle return from Crop Activity
     private val editImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK && editingPosition != -1) {
+        if (result.resultCode == RESULT_OK) {
             val resultUriString = result.data?.getStringExtra("CROPPED_IMAGE_PATH")
-            if (resultUriString != null) {
-                playlistItems[editingPosition].isEdited = true
-                playlistItems[editingPosition].editedFilePath = resultUriString
+            if (resultUriString != null && editingPosition != -1 && editingPosition < playlistItems.size) {
+
+                val item = playlistItems[editingPosition]
+                item.isEdited = true
+                item.editedFilePath = resultUriString
+
                 adapter.notifyItemChanged(editingPosition)
             }
         }
@@ -91,6 +94,15 @@ class PlaylistEditorActivity : AppCompatActivity() {
                 applyPlaylist()
             }
         }
+
+        if (savedInstanceState != null) {
+            editingPosition = savedInstanceState.getInt("EDITING_POS", -1)
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("EDITING_POS", editingPosition)
     }
 
     private fun launchEditActivity(item: PlaylistItem) {
