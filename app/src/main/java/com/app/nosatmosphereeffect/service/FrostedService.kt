@@ -70,6 +70,7 @@ class FrostedService : GLWallpaperService() {
                     val success = nextFile.renameTo(activeFile)
 
                     if (success) {
+                        prefs.edit().putLong("last_rotation_timestamp", currentTime).apply()
                         handler.post {
                             myRenderer?.resetAndClear()
                             requestRender()
