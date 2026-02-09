@@ -204,8 +204,16 @@ class BlurToSharpCropActivity : AppCompatActivity() {
                     .clear()
                     .apply()
 
+                getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+
                 val playlistDir = File(filesDir, "playlist")
                 if (playlistDir.exists()) playlistDir.deleteRecursively()
+
+                val nextWallpaper = File(filesDir, "next_wallpaper.jpg")
+                if (nextWallpaper.exists()) nextWallpaper.delete()
 
                 saveFixedWallpaper(bitmap)
 

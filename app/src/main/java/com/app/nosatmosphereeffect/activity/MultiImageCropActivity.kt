@@ -11,7 +11,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
@@ -38,19 +37,17 @@ class MultiImageCropActivity : AppCompatActivity() {
 
     private lateinit var cropView: TouchImageView
     private lateinit var btnNext: Button
-    private lateinit var textProgress: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Hide System UI for immersive cropping
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         val windowController = WindowCompat.getInsetsController(window, window.decorView)
         windowController.hide(WindowInsetsCompat.Type.systemBars())
         windowController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-        setContentView(R.layout.activity_crop_blur_to_sharp) // Re-using existing layout
+        setContentView(R.layout.activity_crop_blur_to_sharp)
 
         effectId = intent.getStringExtra("EFFECT_ID") ?: "ORIGINAL"
 
@@ -69,10 +66,6 @@ class MultiImageCropActivity : AppCompatActivity() {
         cropView = findViewById(R.id.cropImageView)
         btnNext = findViewById(R.id.btnSaveCrop)
 
-        // We can add a text view dynamically or just use Toast to show progress (1/5)
-        // For simplicity using the existing layout, we update the button text.
-
-        // Clear old playlist before starting a new batch
         clearPlaylist()
 
         loadCurrentImage()
@@ -86,8 +79,6 @@ class MultiImageCropActivity : AppCompatActivity() {
                 currentIndex++
                 loadCurrentImage()
             } else {
-                // Last image processed
-                // Also save the last one as the immediate wallpaper.jpg so the app isn't blank
                 saveFixedWallpaper(croppedBitmap)
                 showApplyDialog()
             }
@@ -160,19 +151,33 @@ class MultiImageCropActivity : AppCompatActivity() {
     }
 
     private fun applyWallpaper() {
-        // Trigger Service Update
-        if (isServiceActive()) {
-            val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
-            intent.setPackage(packageName)
-            sendBroadcast(intent)
-            Toast.makeText(this, "Playlist Updated!", Toast.LENGTH_SHORT).show()
-            goHome()
-        } else {
-            activateService()
-        }
-    }
+        Thread {
+            try {
 
-    // --- Boilerplate Image Loading & Service Logic (Same as other activities) ---
+                getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+
+                val nextWallpaper = File(filesDir, "next_wallpaper.jpg")
+                if (nextWallpaper.exists()) nextWallpaper.delete()
+
+                runOnUiThread {
+                    if (isServiceActive()) {
+                        val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
+                        intent.setPackage(packageName)
+                        sendBroadcast(intent)
+                        Toast.makeText(this, "Playlist Updated!", Toast.LENGTH_SHORT).show()
+                        goHome()
+                    } else {
+                        activateService()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
 
     private fun decodeSampledBitmapFromUri(context: Context, uri: Uri, reqWidth: Int, reqHeight: Int): Bitmap? {
         var inputStream: InputStream? = null

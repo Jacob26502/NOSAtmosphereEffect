@@ -43,6 +43,40 @@ class BlurToSharpService : GLWallpaperService() {
         }
 
         private fun rotateWallpaper() {
+            val playlistDir = File(filesDir, "playlist")
+            val playlistFiles = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+
+            if (playlistFiles == null || playlistFiles.size <= 1) {
+                return
+            }
+
+            val nextFile = File(filesDir, "next_wallpaper.jpg")
+            val activeFile = File(filesDir, "wallpaper.jpg")
+
+            if (nextFile.exists()) {
+                try {
+                    if (activeFile.exists()) {
+                        activeFile.delete()
+                    }
+                    val success = nextFile.renameTo(activeFile)
+
+                    if (success) {
+                        handler.post {
+                            myRenderer?.reloadTexture()
+                            requestRender()
+                             notifyColorsChanged()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                prepareNextWallpaper()
+            } else {
+                prepareNextWallpaper()
+            }
+        }
+
+        private fun prepareNextWallpaper() {
             Thread {
                 try {
                     val playlistDir = File(filesDir, "playlist")
@@ -50,19 +84,24 @@ class BlurToSharpService : GLWallpaperService() {
                         val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
 
                         if (!files.isNullOrEmpty() && files.size > 1) {
-                            // 1. Pick a random file
-                            val randomFile = files.random()
+                            // 1. Get the last used image name from Prefs
+                            val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+                            val lastUsedName = prefs.getString("last_playlist_image", "")
 
-                            // 2. Copy it to the active "wallpaper.jpg"
-                            val activeFile = File(filesDir, "wallpaper.jpg")
-                            randomFile.copyTo(activeFile, overwrite = true)
+                            // 2. Filter the list to EXCLUDE the last used image
+                            val candidates = files.filter { it.name != lastUsedName }
 
-                            // 3. Reload texture on Main Thread
-                            handler.post {
-                                myRenderer?.reloadTexture()
-                                requestRender()
-                                notifyColorsChanged()
-                            }
+                            // 3. Pick from candidates (fallback to all files if something went wrong)
+                            val validFiles = candidates.ifEmpty { files.toList() }
+
+                            val randomFile = validFiles.random()
+
+                            // 4. Save THIS file's name as the new "last used"
+                            prefs.edit().putString("last_playlist_image", randomFile.name).apply()
+
+                            // 5. Copy to next_wallpaper.jpg
+                            val nextFile = File(filesDir, "next_wallpaper.jpg")
+                            randomFile.copyTo(nextFile, overwrite = true)
                         }
                     }
                 } catch (e: Exception) {
