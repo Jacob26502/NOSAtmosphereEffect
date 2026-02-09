@@ -63,7 +63,7 @@ class EffectSelectionActivity : AppCompatActivity() {
     }
 
     private fun showSelectionDialog() {
-        val options = arrayOf("Single Image", "Multiple Images (Playlist)")
+        val options = arrayOf("Single Image", "Multiple Images (Playlist) (Experimental)")
         MaterialAlertDialogBuilder(this)
             .setTitle("Select Wallpaper Mode")
             .setItems(options) { _, which ->
