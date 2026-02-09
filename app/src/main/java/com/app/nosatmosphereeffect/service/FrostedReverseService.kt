@@ -48,6 +48,17 @@ class FrostedReverseService : GLWallpaperService() {
                 return
             }
 
+            val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+            val intervalMinutes = prefs.getLong("rotation_interval_minutes", 0) // Default 0 (Instant)
+            val lastRotationTime = prefs.getLong("last_rotation_timestamp", 0)
+            val currentTime = System.currentTimeMillis()
+            val diffMinutes = (currentTime - lastRotationTime) / 60000
+
+            // If interval set (>0) AND not enough time passed, SKIP rotation
+            if (intervalMinutes > 0 && diffMinutes < intervalMinutes) {
+                return
+            }
+
             val nextFile = File(filesDir, "next_wallpaper.jpg")
             val activeFile = File(filesDir, "wallpaper.jpg")
 

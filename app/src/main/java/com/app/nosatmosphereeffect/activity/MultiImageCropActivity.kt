@@ -52,7 +52,7 @@ class MultiImageCropActivity : AppCompatActivity() {
         effectId = intent.getStringExtra("EFFECT_ID") ?: "ORIGINAL"
 
         // Receive the list of URIs
-        val receivedList = intent.getParcelableArrayListExtra<Uri>("IMAGE_URIS")
+        val receivedList = intent.getParcelableArrayListExtra("IMAGE_URIS", Uri::class.java)
         if (receivedList != null) {
             imageUris.addAll(receivedList)
         }

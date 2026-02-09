@@ -1,6 +1,7 @@
 package com.app.nosatmosphereeffect
 
 import android.app.WallpaperManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Build
@@ -17,6 +18,7 @@ import com.app.nosatmosphereeffect.service.AtmosphereService
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
 import com.app.nosatmosphereeffect.service.FrostedService
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cardBlurSettings: View
     private lateinit var sliderBlurStrength: Slider
     private lateinit var btnUpdateBlur: Button
+    private lateinit var btnRotationInterval: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         cardBlurSettings = findViewById(R.id.cardBlurSettings)
         sliderBlurStrength = findViewById(R.id.sliderBlurStrength)
         btnUpdateBlur = findViewById(R.id.btnUpdateBlur)
+        btnRotationInterval = findViewById(R.id.btnRotationInterval)
 
         btnMainAction.setOnClickListener {
             startActivity(Intent(this, EffectSelectionActivity::class.java))
@@ -71,6 +75,22 @@ class MainActivity : AppCompatActivity() {
         }
         btnUpdateBlur.setOnClickListener {
             applyBlurUpdate()
+        }
+
+        val playlistDir = File(filesDir, "playlist")
+        if (playlistDir.exists() && playlistDir.isDirectory) {
+            val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+            if (!files.isNullOrEmpty() && files.size > 1) {
+                btnRotationInterval.visibility = View.VISIBLE
+                btnRotationInterval.setOnClickListener {
+                    showRotationIntervalDialog()
+                }
+            }else{
+                btnRotationInterval.visibility = View.GONE
+            }
+
+        }else{
+            btnRotationInterval.visibility = View.GONE
         }
     }
 
@@ -189,5 +209,27 @@ class MainActivity : AppCompatActivity() {
 
         btnUpdateBlur.isEnabled = false
         Toast.makeText(this, "Blur Strength Updated!", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showRotationIntervalDialog() {
+        val intervals = arrayOf("Every Lock (Instant)", "15 Minutes", "30 Minutes", "1 Hour", "3 Hours", "6 Hours", "12 Hours", "24 Hours")
+        val values = longArrayOf(0, 15, 30, 60, 180, 360, 720, 1440)
+
+        // Get current setting to show selection (Optional)
+        val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+        val currentVal = prefs.getLong("rotation_interval_minutes", 0)
+        var checkedItem = values.indexOfFirst { it == currentVal }
+        if (checkedItem == -1) checkedItem = 0
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Rotation Interval")
+            .setSingleChoiceItems(intervals, checkedItem) { dialog, which ->
+                val selectedMinutes = values[which]
+                prefs.edit().putLong("rotation_interval_minutes", selectedMinutes).apply()
+
+                android.widget.Toast.makeText(this, "Set to: ${intervals[which]}", android.widget.Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .show()
     }
 }
