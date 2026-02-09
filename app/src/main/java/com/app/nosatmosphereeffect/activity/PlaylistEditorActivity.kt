@@ -94,11 +94,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
     }
 
     private fun launchEditActivity(item: PlaylistItem) {
-        val targetClass = if (effectId.contains("REVERSE")) {
-            BlurToSharpCropActivity::class.java
-        } else {
-            CropActivity::class.java
-        }
+        val targetClass =  MultiImageCropActivity::class.java
 
         val intent = Intent(this, targetClass)
         // Pass original URI if not edited, or the edited file URI if already edited
@@ -107,9 +103,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
         } else {
             intent.data = item.originalUri
         }
-
-        intent.putExtra("EFFECT_ID", effectId)
-        intent.putExtra("IS_EDIT_MODE", true) // Tells activity to show "Done" instead of Apply
         editImageLauncher.launch(intent)
     }
 

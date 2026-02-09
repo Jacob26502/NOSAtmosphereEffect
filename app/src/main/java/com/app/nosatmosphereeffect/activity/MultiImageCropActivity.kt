@@ -31,7 +31,6 @@ import java.io.InputStream
 
 class MultiImageCropActivity : AppCompatActivity() {
 
-    private var effectId: String = "ORIGINAL"
     private var imageUris: ArrayList<Uri> = ArrayList()
     private var currentIndex = 0
 
@@ -49,47 +48,44 @@ class MultiImageCropActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_crop_multi)
 
-        effectId = intent.getStringExtra("EFFECT_ID") ?: "ORIGINAL"
-
         // Receive the list of URIs
-        val receivedList = intent.getParcelableArrayListExtra("IMAGE_URIS", Uri::class.java)
-        if (receivedList != null) {
-            imageUris.addAll(receivedList)
-        }
-
-        if (imageUris.isEmpty()) {
-            Toast.makeText(this, "No images selected", Toast.LENGTH_SHORT).show()
+        val uri = intent.data ?: run {
+            Toast.makeText(this, "No Image Data Found", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
+
+        Thread {
+            try {
+                // Load safely with Downsampling + Rotation
+                val correctedBitmap = decodeSampledBitmapFromUri(this, uri, 4096, 4096)
+
+                runOnUiThread {
+                    if (correctedBitmap != null) {
+                        cropView.setInitialImage(correctedBitmap)
+                    } else {
+                        Toast.makeText(this, "Could not load image format.", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+        }.start()
 
         cropView = findViewById(R.id.cropImageView)
         btnDone = findViewById(R.id.btnSaveCrop)
 
         clearPlaylist()
 
-        loadCurrentImage()
-
         btnDone.setOnClickListener {
             val croppedBitmap = cropView.getCroppedBitmap()
             saveToPlaylist(croppedBitmap)
             finish()
         }
-    }
-
-    private fun loadCurrentImage() {
-        val uri = imageUris[currentIndex]
-
-        Thread {
-            val bitmap = decodeSampledBitmapFromUri(this, uri, 4096, 4096)
-            runOnUiThread {
-                if (bitmap != null) {
-                    cropView.setInitialImage(bitmap)
-                } else {
-                    Toast.makeText(this, "Failed to load image ${currentIndex + 1}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }.start()
     }
 
     private fun saveToPlaylist(bitmap: Bitmap) {
@@ -108,60 +104,12 @@ class MultiImageCropActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveFixedWallpaper(bitmap: Bitmap) {
-        val file = File(filesDir, "wallpaper.jpg")
-        if (file.exists()) file.delete()
-        FileOutputStream(file).use { out ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-        }
-    }
-
     private fun clearPlaylist() {
         val playlistDir = File(filesDir, "playlist")
         if (playlistDir.exists()) {
             playlistDir.deleteRecursively()
             playlistDir.mkdirs()
         }
-    }
-
-    private fun showApplyDialog() {
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Apply Playlist")
-            .setMessage("All images processed!\n\nIn the next screen, you MUST select:\n\nSet Wallpaper > Home Screen and Lock Screen.\n\n(This is required for the playlist to rotate correctly).")
-            .setPositiveButton("Set Wallpaper") { _, _ ->
-                applyWallpaper()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun applyWallpaper() {
-        Thread {
-            try {
-
-                getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
-                    .edit()
-                    .clear()
-                    .apply()
-
-                val nextWallpaper = File(filesDir, "next_wallpaper.jpg")
-                if (nextWallpaper.exists()) nextWallpaper.delete()
-
-                runOnUiThread {
-                    if (isServiceActive()) {
-                        val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
-                        intent.setPackage(packageName)
-                        sendBroadcast(intent)
-                        Toast.makeText(this, "Playlist Updated!", Toast.LENGTH_SHORT).show()
-                        goHome()
-                    } else {
-                        activateService()
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }.start()
     }
 
     private fun decodeSampledBitmapFromUri(context: Context, uri: Uri, reqWidth: Int, reqHeight: Int): Bitmap? {
@@ -235,41 +183,6 @@ class MultiImageCropActivity : AppCompatActivity() {
             while (inSampleSize < factor) inSampleSize *= 2
         }
         return inSampleSize
-    }
-
-    private fun isServiceActive(): Boolean {
-        val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo ?: return false
-        val activeClass = info.component.className
-
-        // Map ID to Class Name
-        val targetClass = when(effectId) {
-            "ORIGINAL" -> AtmosphereService::class.java.name
-            "REVERSE" -> BlurToSharpService::class.java.name
-            "FROSTED" -> FrostedService::class.java.name
-            "FROSTED_REVERSE" -> FrostedReverseService::class.java.name
-            else -> AtmosphereService::class.java.name
-        }
-        return activeClass == targetClass
-    }
-
-    private fun activateService() {
-        try {
-            val serviceClass = when(effectId) {
-                "ORIGINAL" -> AtmosphereService::class.java
-                "REVERSE" -> BlurToSharpService::class.java
-                "FROSTED" -> FrostedService::class.java
-                "FROSTED_REVERSE" -> FrostedReverseService::class.java
-                else -> AtmosphereService::class.java
-            }
-            val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
-            intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(this, serviceClass))
-            startActivity(intent)
-        } catch (e: Exception) {
-            startActivity(Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER))
-        } finally {
-            finish()
-        }
     }
 
     private fun goHome() {
