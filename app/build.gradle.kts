@@ -8,14 +8,14 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.app.nosatmosphereeffect"
+        applicationId = "com.saad_khan_rind.atmosphere_effect"
         val targetSdkEnv = project.findProperty("targetSdkOverride")?.toString()?.toIntOrNull() ?: 36
         targetSdk = targetSdkEnv
         minSdk = if (targetSdkEnv >= 36) 36 else 33
-        val baseVersionCode = 21
+        val baseVersionCode = 22
         val codeOffset = if (targetSdkEnv >= 36) 200000 else 100000
         versionCode = baseVersionCode + codeOffset
-        versionName = "4.3.4"
+        versionName = "4.3.5"
     }
 
     buildFeatures {
