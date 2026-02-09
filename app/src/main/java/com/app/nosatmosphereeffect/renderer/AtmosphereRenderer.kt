@@ -31,6 +31,7 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         }
     @Volatile var dimLevel: Float = 0.2f
     @Volatile private var needsReload: Boolean = false
+    @Volatile private var isResetting = false
     @Volatile var enableNoise: Boolean = false
     @Volatile var noiseScale: Float = 2000.0f
     @Volatile var noiseStrength: Float = 0.06f
@@ -60,6 +61,10 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     private val blobColorsBuffer = FloatArray(MAX_BLOBS * 3)
     private val blobPosBuffer = FloatArray(MAX_BLOBS * 2)
     private val blobSizesBuffer = FloatArray(MAX_BLOBS)
+
+    fun resetAndClear() {
+        isResetting = true
+    }
 
     private val vertices = floatArrayOf(
         -1f, -1f,  0f, 1f,
@@ -219,6 +224,24 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     }
 
     override fun onDrawFrame(gl: GL10?) {
+
+        if (isResetting) {
+            // SAFETY CURTAIN: Clear screen to Black
+            // This ensures the "Ghost" of the old image is wiped from the GPU buffer.
+            GLES30.glClearColor(0f, 0f, 0f, 1f)
+            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+
+            // Reset Logic State
+            blurStrength = 0.0f
+
+            // Force texture reload for the NEXT frame (when screen turns on)
+            needsReload = true
+
+            // Turn off flag and STOP drawing this frame
+            isResetting = false
+            return
+        }
+
         if (needsReload) {
             needsReload = false
             loadAndApplyTextures()

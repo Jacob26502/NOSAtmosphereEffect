@@ -62,9 +62,9 @@ class BlurToSharpService : GLWallpaperService() {
 
                     if (success) {
                         handler.post {
-                            myRenderer?.reloadTexture()
+                            myRenderer?.resetAndClear()
                             requestRender()
-                             notifyColorsChanged()
+                            notifyColorsChanged()
                         }
                     }
                 } catch (e: Exception) {

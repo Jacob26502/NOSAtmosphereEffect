@@ -60,7 +60,7 @@ class FrostedService : GLWallpaperService() {
 
                     if (success) {
                         handler.post {
-                            myRenderer?.reloadTexture()
+                            myRenderer?.resetAndClear()
                             requestRender()
                             notifyColorsChanged()
                         }

@@ -60,7 +60,7 @@ class FrostedReverseService : GLWallpaperService() {
 
                     if (success) {
                         handler.post {
-                            myRenderer?.reloadTexture()
+                            myRenderer?.resetAndClear(1.0f)
                             requestRender()
                             notifyColorsChanged()
                         }
