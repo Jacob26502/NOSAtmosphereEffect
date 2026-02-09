@@ -21,9 +21,15 @@ Open the app and choose your desired atmosphere style from the selection screen:
 * **Simple Frosted:** Modern minimalism. Applies a clean, uniform frosted glass blur (no clouds).
 * **Simple Frosted (Reverse):** Elegant clarity. Wakes up from a heavy frosted blur into a crystal clear wallpaper.
 
-### 2\. Select & Align Image
+### 2\. Select Image & Playlist Mode
+   After selecting an effect, you will be prompted to choose your wallpaper mode:
 
-After selecting an effect, pick an image from your gallery. Use gestures to pinch-to-zoom and drag the image to your desired position. What you see inside the view is exactly how the wallpaper will be cropped. Once satisfied, press **"Apply"**.
+* **Single Image:** Standard mode. Pick one image, crop it, and apply.
+
+* **Multiple Images (Playlist):** Select multiple images from your gallery to create a Wallpaper Playlist. 
+* You will crop each image one by one. 
+* Once finished, the app will automatically rotate through these wallpapers based on your settings.
+
 
 ### 3\. Application & Activation
 
@@ -57,12 +63,18 @@ Take full control of the animation and look. You can now tweak the following set
 * **Dimness Level:** Adjust the darkening overlay to ensure your home screen icons remain readable against bright wallpapers.
 * **Blur Strength:** (Frosted Effects Only) Use the slider to fine-tune the intensity of the blur radius, from a light mist to heavy glass.
 * **Experimental Grain (Noise):** Enable a film-grain texture on top of the blur. You can customize:
-* **Noise Strength:** How visible the grain is.
-* **Noise Scale:** The size/coarseness of the grain particles.
+  * **Noise Strength:** How visible the grain is.
+  * **Noise Scale:** The size/coarseness of the grain particles.
 ### Animation & Behavior
 * **Animation Duration:** Control the total transition duration.
 * **Lock Delay (Anti-Flicker):** Adds a configurable pause before the wallpaper resets when you lock the phone. This prevents the visual glitch where the wallpaper "snaps" back to its initial state before the screen turns fully black.
 * **Unlock Check Interval:** Adjusts how frequently the app detects unlock events. Tuning this eliminates "delayed start" issues, ensuring the animation begins immediately when you wake your device.
+### Playlist & Rotation
+(Only available when using Multiple Images mode)
+* **Rotation Interval:** Controls how often the wallpaper changes from your playlist.
+  * **Options:** Every Lock (Instant), 15 Minutes, 1 Hour, up to 24 Hours.
+  * **Smart Rotation:** To prevent lag or visual glitches, the wallpaper only rotates when the screen is OFF.
+  * *Example:* If you set "15 Minutes", the app checks the time whenever you lock your phone. If 15 minutes have passed since the last change, it swaps the wallpaper in the background so it's ready the next time you unlock.
 
 ## Known Issues
 

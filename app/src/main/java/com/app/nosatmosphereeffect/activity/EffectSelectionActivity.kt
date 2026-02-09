@@ -1,5 +1,6 @@
 package com.app.nosatmosphereeffect.activity
 
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -9,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.app.nosatmosphereeffect.helper.EffectItem
 import com.app.nosatmosphereeffect.helper.EffectsAdapter
 import com.app.nosatmosphereeffect.R
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class EffectSelectionActivity : AppCompatActivity() {
 
@@ -37,18 +39,14 @@ class EffectSelectionActivity : AppCompatActivity() {
         )
     )
 
-    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            val intent = if (selectedEffectId.contains("REVERSE")) {
-                Intent(this, BlurToSharpCropActivity::class.java)
-            } else {
-                Intent(this, CropActivity::class.java)
-            }
-            intent.data = uri
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            intent.putExtra("EFFECT_ID", selectedEffectId)
-            startActivity(intent)
-            finish()
+    private val pickSingleImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { launchCropActivity(it) }
+    }
+
+    // Multiple Image Picker
+    private val pickMultipleImages = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            launchMultiCropActivity(ArrayList(uris))
         }
     }
 
@@ -57,12 +55,63 @@ class EffectSelectionActivity : AppCompatActivity() {
         setContentView(R.layout.activity_effect_selection)
 
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerEffects)
-
         val adapter = EffectsAdapter(effectsList) { item ->
             selectedEffectId = item.id
-            pickImage.launch("image/*")
+            showSelectionDialog()
         }
-
         recyclerView.adapter = adapter
+    }
+
+    private fun showSelectionDialog() {
+        val options = arrayOf("Single Image", "Multiple Images (Playlist) (Experimental)")
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Select Wallpaper Mode")
+            .setItems(options) { _, which ->
+                if (which == 0) {
+                    pickSingleImage.launch("image/*")
+                } else {
+                    pickMultipleImages.launch("image/*")
+                }
+            }
+            .show()
+    }
+
+    private fun launchCropActivity(uri: Uri) {
+        val intent = if (selectedEffectId.contains("REVERSE")) {
+            Intent(this, BlurToSharpCropActivity::class.java)
+        } else {
+            Intent(this, CropActivity::class.java)
+        }
+        intent.data = uri
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        intent.putExtra("EFFECT_ID", selectedEffectId)
+        startActivity(intent)
+        finish()
+    }
+
+    private fun launchMultiCropActivity(uris: ArrayList<Uri>) {
+        val intent = Intent(this, MultiImageCropActivity::class.java)
+
+        // --- KEY FIX: CLIP DATA PERMISSIONS ---
+        // 1. Set the first URI as the primary data
+        intent.data = uris[0]
+
+        // 2. Create ClipData containing ALL URIs
+        // This is the mechanism Android uses to understand which files to grant permission for.
+        val clipData = ClipData.newUri(contentResolver, "Images", uris[0])
+        for (i in 1 until uris.size) {
+            clipData.addItem(ClipData.Item(uris[i]))
+        }
+        intent.clipData = clipData
+
+        // 3. Grant permissions (Now applies to everything in ClipData)
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+        // 4. Pass the list for easy indexing in the next activity
+        intent.putParcelableArrayListExtra("IMAGE_URIS", uris)
+
+        intent.putExtra("EFFECT_ID", selectedEffectId)
+        startActivity(intent)
+        finish()
     }
 }

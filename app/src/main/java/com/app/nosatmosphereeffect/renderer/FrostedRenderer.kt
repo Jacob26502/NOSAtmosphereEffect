@@ -27,6 +27,7 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
     @Volatile var noiseScale: Float = 2000.0f
     @Volatile var noiseStrength: Float = 0.06f
     @Volatile var blurRadius: Float = 200.0f
+    @Volatile private var isResetting = false
 
     private var programId: Int = 0
     private var blurProgramId: Int = 0
@@ -35,6 +36,10 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
     private var tempTextureId: Int = 0
     private var fboId: Int = 0
     private var aspectRatio: Float = 1.0f
+    fun resetAndClear(value: Float = 0.0f) {
+        isResetting = true
+        blurStrength = value
+    }
 
     private val vertices = floatArrayOf(
         -1f, -1f,  0f, 1f,
@@ -115,6 +120,20 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
     }
 
     override fun onDrawFrame(gl: GL10?) {
+        if (isResetting) {
+            // SAFETY CURTAIN: Clear screen to Black
+            // This ensures the "Ghost" of the old image is wiped from the GPU buffer.
+            GLES30.glClearColor(0f, 0f, 0f, 1f)
+            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+
+            // Force texture reload for the NEXT frame (when screen turns on)
+            needsReload = true
+
+            // Turn off flag and STOP drawing this frame
+            isResetting = false
+            return
+        }
+
         if (needsReload) {
             needsReload = false
             loadAndApplyTextures()

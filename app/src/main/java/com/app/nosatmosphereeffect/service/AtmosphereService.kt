@@ -40,6 +40,87 @@ class AtmosphereService : GLWallpaperService() {
 
         private val resetRunnable = Runnable {
             prepareForNextUnlock()
+            rotateWallpaper()
+        }
+
+        private fun rotateWallpaper() {
+            val playlistDir = File(filesDir, "playlist")
+            val playlistFiles = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+
+            if (playlistFiles == null || playlistFiles.size <= 1) {
+                return
+            }
+
+            val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+            val intervalMinutes = prefs.getLong("rotation_interval_minutes", 0) // Default 0 (Instant)
+            val lastRotationTime = prefs.getLong("last_rotation_timestamp", 0)
+            val currentTime = System.currentTimeMillis()
+            val diffMinutes = (currentTime - lastRotationTime) / 60000
+
+            // If interval set (>0) AND not enough time passed, SKIP rotation
+            if (intervalMinutes > 0 && diffMinutes < intervalMinutes) {
+                return
+            }
+
+            val nextFile = File(filesDir, "next_wallpaper.jpg")
+            val activeFile = File(filesDir, "wallpaper.jpg")
+
+            if (nextFile.exists()) {
+                try {
+                    if (activeFile.exists()) {
+                        activeFile.delete()
+                    }
+                    val success = nextFile.renameTo(activeFile)
+
+                    if (success) {
+                        prefs.edit().putLong("last_rotation_timestamp", currentTime).apply()
+                        handler.post {
+                            myRenderer?.resetAndClear()
+                            requestRender()
+                            notifyColorsChanged()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                prepareNextWallpaper()
+            } else {
+                prepareNextWallpaper()
+            }
+        }
+
+        private fun prepareNextWallpaper() {
+            Thread {
+                try {
+                    val playlistDir = File(filesDir, "playlist")
+                    if (playlistDir.exists() && playlistDir.isDirectory) {
+                        val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+
+                        if (!files.isNullOrEmpty() && files.size > 1) {
+                            // 1. Get the last used image name from Prefs
+                            val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+                            val lastUsedName = prefs.getString("last_playlist_image", "")
+
+                            // 2. Filter the list to EXCLUDE the last used image
+                            val candidates = files.filter { it.name != lastUsedName }
+
+                            // 3. Pick from candidates (fallback to all files if something went wrong)
+                            val validFiles = candidates.ifEmpty { files.toList() }
+
+                            val randomFile = validFiles.random()
+
+                            // 4. Save THIS file's name as the new "last used"
+                            prefs.edit().putString("last_playlist_image", randomFile.name).apply()
+
+                            // 5. Copy to next_wallpaper.jpg
+                            val nextFile = File(filesDir, "next_wallpaper.jpg")
+                            randomFile.copyTo(nextFile, overwrite = true)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }.start()
         }
 
         override fun onComputeColors(): WallpaperColors? {
