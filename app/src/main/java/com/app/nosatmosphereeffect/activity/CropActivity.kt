@@ -241,6 +241,9 @@ class CropActivity : AppCompatActivity() {
                     .clear()
                     .apply()
 
+                val playlistDir = File(filesDir, "playlist")
+                if (playlistDir.exists()) playlistDir.deleteRecursively()
+
                 saveFixedWallpaper(bitmap)
 
                 if (saveToGallery) {

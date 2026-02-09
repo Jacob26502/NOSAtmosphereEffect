@@ -204,6 +204,9 @@ class BlurToSharpCropActivity : AppCompatActivity() {
                     .clear()
                     .apply()
 
+                val playlistDir = File(filesDir, "playlist")
+                if (playlistDir.exists()) playlistDir.deleteRecursively()
+
                 saveFixedWallpaper(bitmap)
 
                 runOnUiThread {

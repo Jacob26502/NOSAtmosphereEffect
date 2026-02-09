@@ -35,7 +35,39 @@ class FrostedService : GLWallpaperService() {
         private var isLocked: Boolean = true
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
-        private val resetRunnable = Runnable { prepareForNextUnlock() }
+        private val resetRunnable = Runnable {
+            prepareForNextUnlock()
+            rotateWallpaper()
+        }
+
+        private fun rotateWallpaper() {
+            Thread {
+                try {
+                    val playlistDir = File(filesDir, "playlist")
+                    if (playlistDir.exists() && playlistDir.isDirectory) {
+                        val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+
+                        if (!files.isNullOrEmpty() && files.size > 1) {
+                            // 1. Pick a random file
+                            val randomFile = files.random()
+
+                            // 2. Copy it to the active "wallpaper.jpg"
+                            val activeFile = File(filesDir, "wallpaper.jpg")
+                            randomFile.copyTo(activeFile, overwrite = true)
+
+                            // 3. Reload texture on Main Thread
+                            handler.post {
+                                myRenderer?.reloadTexture()
+                                requestRender()
+                                notifyColorsChanged()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }.start()
+        }
 
         override fun onComputeColors(): WallpaperColors? {
             try {

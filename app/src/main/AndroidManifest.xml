@@ -35,6 +35,8 @@
             android:name=".activity.AdvancedSettingsActivity"
             android:windowSoftInputMode="adjustResize"/>
 
+        <activity android:name=".activity.MultiImageCropActivity" />
+
         <service
             android:name=".service.AtmosphereService"
             android:enabled="true"
