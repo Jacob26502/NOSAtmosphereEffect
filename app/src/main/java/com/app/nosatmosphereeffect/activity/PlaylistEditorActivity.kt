@@ -25,7 +25,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.app.nosatmosphereeffect.MainActivity
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.PlaylistAdapter
-import com.app.nosatmosphereeffect.helper.PlaylistItem
 import com.app.nosatmosphereeffect.service.AtmosphereService
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
@@ -52,7 +51,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
     private lateinit var btnApplyAll: Button
     private lateinit var tvCounter: TextView
 
-    // Picker for "Add More"
     private val pickMultipleImages = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri> ->
         if (uris.isNotEmpty()) {
             val startPos = playlistItems.size
@@ -63,7 +61,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
         }
     }
 
-    // Handle return from Crop Activity
     private val editImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val resultUriString = result.data?.getStringExtra("CROPPED_IMAGE_PATH")
@@ -82,10 +79,8 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-
         setContentView(R.layout.activity_playlist_editor)
 
         effectId = intent.getStringExtra("EFFECT_ID") ?: "ORIGINAL"
@@ -100,7 +95,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
         val btnAddMore = findViewById<Button>(R.id.btnAddMore)
         val recycler = findViewById<RecyclerView>(R.id.recyclerPlaylist)
 
-        // --- CAROUSEL SETUP ---
         setupCarouselRecyclerView(recycler)
 
         adapter = PlaylistAdapter(this, playlistItems,
@@ -117,11 +111,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
         )
         recycler.adapter = adapter
 
-        // --- BUTTONS ---
-        btnAddMore.setOnClickListener {
-            // Re-open picker to add more
-            pickMultipleImages.launch("image/*")
-        }
+        btnAddMore.setOnClickListener { pickMultipleImages.launch("image/*") }
 
         btnApplyAll.setOnClickListener {
             if (playlistItems.isEmpty()) {
@@ -134,37 +124,23 @@ class PlaylistEditorActivity : AppCompatActivity() {
         if (savedInstanceState != null) {
             editingPosition = savedInstanceState.getInt("EDITING_POS", -1)
         }
-
         updateUIState()
     }
 
     private fun setupCarouselRecyclerView(recycler: RecyclerView) {
         recycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-
-        // 1. Snap Helper for "Center" snapping
         val snapHelper = PagerSnapHelper()
         snapHelper.attachToRecyclerView(recycler)
 
-        // 2. Calculate padding to center the items
-        // Item Width is 300dp + 16dp margin (8dp each side) ~ 316dp
-        // We calculate exact pixels to set padding so the first item sits in center
         recycler.post {
             val displayMetrics = DisplayMetrics()
             windowManager.defaultDisplay.getMetrics(displayMetrics)
             val screenWidth = displayMetrics.widthPixels
-
-            // Assume card width from XML (300dp) converted to pixels
             val cardWidthPx = (300 * resources.displayMetrics.density).toInt()
-            val cardMarginPx = (16 * resources.displayMetrics.density).toInt() // 8dp * 2
+            val cardMarginPx = (16 * resources.displayMetrics.density).toInt()
             val totalItemWidth = cardWidthPx + cardMarginPx
-
-            // Padding = (Screen - Item) / 2
             val padding = (screenWidth - totalItemWidth) / 2
-
-            // Apply padding. clipToPadding="false" in XML is mandatory for this to work
             recycler.setPadding(padding, 0, padding, 0)
-
-            // Scroll to 0 to snap first item
             recycler.scrollToPosition(0)
         }
     }
@@ -172,7 +148,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
     private fun updateUIState() {
         val count = playlistItems.size
         tvCounter.text = "$count Images Selected"
-
         if (count > 0) {
             btnApplyAll.isEnabled = true
             btnApplyAll.alpha = 1.0f
@@ -204,11 +179,16 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
         Thread {
             try {
+                // 1. CLEANUP PREVIOUS PLAYLIST DATA
                 val playlistDir = File(filesDir, "playlist")
                 if (playlistDir.exists()) playlistDir.deleteRecursively()
                 playlistDir.mkdirs()
 
-                // Process each item
+                // 2. CLEANUP STALE SINGLE-IMAGE DATA (Important!)
+                val nextWallpaper = File(filesDir, "next_wallpaper.jpg")
+                if (nextWallpaper.exists()) nextWallpaper.delete()
+
+                // 3. Process each item
                 playlistItems.forEachIndexed { index, item ->
                     val destFile = File(playlistDir, "wallpaper_$index.jpg")
 
@@ -224,14 +204,16 @@ class PlaylistEditorActivity : AppCompatActivity() {
                     }
                 }
 
-                // Set main wallpaper
+                // 4. Set Main Wallpaper
                 val firstFile = File(playlistDir, "wallpaper_0.jpg")
                 val activeWallpaper = File(filesDir, "wallpaper.jpg")
                 if (firstFile.exists()) {
                     firstFile.copyTo(activeWallpaper, overwrite = true)
                 }
 
+                // 5. RESET ALL PREFERENCES TO ENSURE FRESH START
                 getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                getSharedPreferences("app_prefs", Context.MODE_PRIVATE).edit().clear().apply()
 
                 runOnUiThread {
                     progress.dismiss()

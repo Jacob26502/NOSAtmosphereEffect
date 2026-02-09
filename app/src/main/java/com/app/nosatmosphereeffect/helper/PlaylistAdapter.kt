@@ -1,7 +1,9 @@
 package com.app.nosatmosphereeffect.helper
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -10,17 +12,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
+import androidx.exifinterface.media.ExifInterface
 import androidx.recyclerview.widget.RecyclerView
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.activity.PlaylistEditorActivity
+import java.io.InputStream
 import java.util.concurrent.Executors
-
-data class PlaylistItem(
-    val originalUri: Uri,
-    var isEdited: Boolean = false,
-    var editedFilePath: String? = null,
-    var matrixValues: FloatArray? = null // Store zoom state here
-)
 
 class PlaylistAdapter(
     private val context: Context,
@@ -51,8 +48,6 @@ class PlaylistAdapter(
         // Clear previous
         holder.imgThumbnail.setImageBitmap(null)
 
-        // Load the EDITED file if it exists, otherwise original.
-        // Because ImageView is centerCrop, it will look correct either way.
         val uriToLoad = if (item.isEdited && item.editedFilePath != null) {
             Uri.parse("file://${item.editedFilePath}")
         } else {
@@ -86,14 +81,45 @@ class PlaylistAdapter(
                 options.inSampleSize = calculateInSampleSize(options, 300, 400)
                 options.inJustDecodeBounds = false
 
-                val bmp = context.contentResolver.openInputStream(uri)?.use {
+                var bmp = context.contentResolver.openInputStream(uri)?.use {
                     BitmapFactory.decodeStream(it, null, options)
+                }
+
+                // FIX: Apply Rotation Logic to Thumbnail
+                if (bmp != null) {
+                    bmp = handleExifRotation(context, uri, bmp)
                 }
 
                 handler.post {
                     if (bmp != null) imageView.setImageBitmap(bmp)
                 }
             } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    // Copied Rotation Logic
+    private fun handleExifRotation(context: Context, uri: Uri, bitmap: Bitmap): Bitmap {
+        var inputStream: InputStream? = null
+        try {
+            inputStream = context.contentResolver.openInputStream(uri) ?: return bitmap
+            val exif = ExifInterface(inputStream)
+            val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+            val rotation = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+            if (rotation == 0f) return bitmap
+            val matrix = Matrix().apply { postRotate(rotation) }
+            val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            if (rotated != bitmap) bitmap.recycle()
+            return rotated
+        } catch (e: Exception) {
+            return bitmap
+        } finally {
+            inputStream?.close()
         }
     }
 
