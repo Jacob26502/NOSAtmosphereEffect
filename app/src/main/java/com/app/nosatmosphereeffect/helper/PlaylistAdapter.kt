@@ -1,7 +1,6 @@
 package com.app.nosatmosphereeffect.helper
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Handler
@@ -18,7 +17,8 @@ import java.util.concurrent.Executors
 data class PlaylistItem(
     val originalUri: Uri,
     var isEdited: Boolean = false,
-    var editedFilePath: String? = null
+    var editedFilePath: String? = null,
+    var matrixValues: FloatArray? = null // Store zoom state here
 )
 
 class PlaylistAdapter(
@@ -47,9 +47,11 @@ class PlaylistAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
 
-        // Clear the current image to prevent showing the old one during load
+        // Clear previous
         holder.imgThumbnail.setImageBitmap(null)
 
+        // Load the EDITED file if it exists, otherwise original.
+        // Because ImageView is centerCrop, it will look correct either way.
         val uriToLoad = if (item.isEdited && item.editedFilePath != null) {
             Uri.parse("file://${item.editedFilePath}")
         } else {
@@ -58,7 +60,6 @@ class PlaylistAdapter(
 
         loadThumbnail(uriToLoad, holder.imgThumbnail)
 
-        // Show edit status
         if (item.isEdited) {
             holder.iconEdited.visibility = View.VISIBLE
             holder.overlayEdited.visibility = View.VISIBLE
@@ -72,16 +73,16 @@ class PlaylistAdapter(
     }
 
     private fun loadThumbnail(uri: Uri, imageView: ImageView) {
-        imageView.setImageBitmap(null) // Clear previous
         executor.execute {
             try {
-                // Simple downsampling loader
+                // Decode bounds first
                 val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 context.contentResolver.openInputStream(uri)?.use {
                     BitmapFactory.decodeStream(it, null, options)
                 }
 
-                options.inSampleSize = calculateInSampleSize(options, 200, 300)
+                // Calculate sample size for thumbnail
+                options.inSampleSize = calculateInSampleSize(options, 300, 400)
                 options.inJustDecodeBounds = false
 
                 val bmp = context.contentResolver.openInputStream(uri)?.use {

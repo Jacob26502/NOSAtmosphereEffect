@@ -44,11 +44,15 @@ class PlaylistEditorActivity : AppCompatActivity() {
     private val editImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val resultUriString = result.data?.getStringExtra("CROPPED_IMAGE_PATH")
-            if (resultUriString != null && editingPosition != -1 && editingPosition < playlistItems.size) {
+            val matrixValues = result.data?.getFloatArrayExtra("MATRIX_VALUES")
 
+            if (resultUriString != null && editingPosition != -1 && editingPosition < playlistItems.size) {
                 val item = playlistItems[editingPosition]
+
+                // Update Path AND State
                 item.isEdited = true
                 item.editedFilePath = resultUriString
+                item.matrixValues = matrixValues
 
                 adapter.notifyItemChanged(editingPosition)
             }
@@ -106,15 +110,16 @@ class PlaylistEditorActivity : AppCompatActivity() {
     }
 
     private fun launchEditActivity(item: PlaylistItem) {
-        val targetClass =  MultiImageCropActivity::class.java
+        val intent = Intent(this, MultiImageCropActivity::class.java)
 
-        val intent = Intent(this, targetClass)
-        // Pass original URI if not edited, or the edited file URI if already edited
-        if (item.isEdited && item.editedFilePath != null) {
-            intent.data = Uri.parse("file://${item.editedFilePath}")
-        } else {
-            intent.data = item.originalUri
+        // ALWAYS pass Original URI to allow zooming out / re-cropping from scratch
+        intent.data = item.originalUri
+
+        // Pass saved state if it exists
+        if (item.matrixValues != null) {
+            intent.putExtra("MATRIX_VALUES", item.matrixValues)
         }
+
         editImageLauncher.launch(intent)
     }
 
