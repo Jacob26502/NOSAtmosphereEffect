@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="160dp"
-    android:layout_height="300dp"
+    android:layout_width="300dp"
+    android:layout_height="500dp"
     android:layout_margin="8dp"
     app:cardBackgroundColor="#222222"
-    app:cardCornerRadius="16dp"
+    app:cardCornerRadius="24dp"
     app:strokeColor="#444444"
-    app:strokeWidth="1dp">
+    app:strokeWidth="1dp"
+    app:cardElevation="8dp">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -29,8 +30,8 @@
 
         <ImageView
             android:id="@+id/iconEdited"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:src="@android:drawable/ic_menu_crop"
             android:layout_centerInParent="true"
             app:tint="@color/brand_primary"
@@ -38,16 +39,16 @@
 
         <FrameLayout
             android:id="@+id/btnDelete"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_alignParentEnd="true"
             android:layout_alignParentTop="true"
-            android:layout_margin="8dp"
+            android:layout_margin="12dp"
             android:background="@drawable/text_bg_scrim_rounded">
 
             <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_delete"
                 android:layout_gravity="center"
                 app:tint="#FF4444"/>

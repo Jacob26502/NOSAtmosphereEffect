@@ -10,18 +10,22 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
+import android.util.DisplayMetrics
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.exifinterface.media.ExifInterface
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.app.nosatmosphereeffect.MainActivity
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.PlaylistAdapter
+import com.app.nosatmosphereeffect.helper.PlaylistItem
 import com.app.nosatmosphereeffect.service.AtmosphereService
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
@@ -42,20 +46,34 @@ class PlaylistEditorActivity : AppCompatActivity() {
         val originalUri: Uri,
         var isEdited: Boolean = false,
         var editedFilePath: String? = null,
-        var matrixState: FloatArray? = null // Add this field
+        var matrixState: FloatArray? = null
     )
+
+    private lateinit var btnApplyAll: Button
+    private lateinit var tvCounter: TextView
+
+    // Picker for "Add More"
+    private val pickMultipleImages = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            val startPos = playlistItems.size
+            uris.forEach { playlistItems.add(PlaylistItem(it)) }
+            adapter.notifyItemRangeInserted(startPos, uris.size)
+            updateUIState()
+            Toast.makeText(this, "${uris.size} images added", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Handle return from Crop Activity
     private val editImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val resultUriString = result.data?.getStringExtra("CROPPED_IMAGE_PATH")
-            val matrixState = result.data?.getFloatArrayExtra("MATRIX_STATE") // Retrieve State
+            val matrixState = result.data?.getFloatArrayExtra("MATRIX_STATE")
 
             if (resultUriString != null && editingPosition != -1 && editingPosition < playlistItems.size) {
                 val item = playlistItems[editingPosition]
                 item.isEdited = true
                 item.editedFilePath = resultUriString
-                item.matrixState = matrixState // Save State
+                item.matrixState = matrixState
 
                 adapter.notifyItemChanged(editingPosition)
             }
@@ -65,7 +83,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Full screen setup
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
@@ -78,8 +95,13 @@ class PlaylistEditorActivity : AppCompatActivity() {
             uris.forEach { playlistItems.add(PlaylistItem(it)) }
         }
 
+        btnApplyAll = findViewById(R.id.btnApplyAll)
+        tvCounter = findViewById(R.id.tvCounter)
+        val btnAddMore = findViewById<Button>(R.id.btnAddMore)
         val recycler = findViewById<RecyclerView>(R.id.recyclerPlaylist)
-        recycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+
+        // --- CAROUSEL SETUP ---
+        setupCarouselRecyclerView(recycler)
 
         adapter = PlaylistAdapter(this, playlistItems,
             onItemClick = { pos ->
@@ -90,11 +112,18 @@ class PlaylistEditorActivity : AppCompatActivity() {
                 playlistItems.removeAt(pos)
                 adapter.notifyItemRemoved(pos)
                 adapter.notifyItemRangeChanged(pos, playlistItems.size)
+                updateUIState()
             }
         )
         recycler.adapter = adapter
 
-        findViewById<Button>(R.id.btnApplyAll).setOnClickListener {
+        // --- BUTTONS ---
+        btnAddMore.setOnClickListener {
+            // Re-open picker to add more
+            pickMultipleImages.launch("image/*")
+        }
+
+        btnApplyAll.setOnClickListener {
             if (playlistItems.isEmpty()) {
                 Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show()
             } else {
@@ -105,6 +134,52 @@ class PlaylistEditorActivity : AppCompatActivity() {
         if (savedInstanceState != null) {
             editingPosition = savedInstanceState.getInt("EDITING_POS", -1)
         }
+
+        updateUIState()
+    }
+
+    private fun setupCarouselRecyclerView(recycler: RecyclerView) {
+        recycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+
+        // 1. Snap Helper for "Center" snapping
+        val snapHelper = PagerSnapHelper()
+        snapHelper.attachToRecyclerView(recycler)
+
+        // 2. Calculate padding to center the items
+        // Item Width is 300dp + 16dp margin (8dp each side) ~ 316dp
+        // We calculate exact pixels to set padding so the first item sits in center
+        recycler.post {
+            val displayMetrics = DisplayMetrics()
+            windowManager.defaultDisplay.getMetrics(displayMetrics)
+            val screenWidth = displayMetrics.widthPixels
+
+            // Assume card width from XML (300dp) converted to pixels
+            val cardWidthPx = (300 * resources.displayMetrics.density).toInt()
+            val cardMarginPx = (16 * resources.displayMetrics.density).toInt() // 8dp * 2
+            val totalItemWidth = cardWidthPx + cardMarginPx
+
+            // Padding = (Screen - Item) / 2
+            val padding = (screenWidth - totalItemWidth) / 2
+
+            // Apply padding. clipToPadding="false" in XML is mandatory for this to work
+            recycler.setPadding(padding, 0, padding, 0)
+
+            // Scroll to 0 to snap first item
+            recycler.scrollToPosition(0)
+        }
+    }
+
+    private fun updateUIState() {
+        val count = playlistItems.size
+        tvCounter.text = "$count Images Selected"
+
+        if (count > 0) {
+            btnApplyAll.isEnabled = true
+            btnApplyAll.alpha = 1.0f
+        } else {
+            btnApplyAll.isEnabled = false
+            btnApplyAll.alpha = 0.5f
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -114,15 +189,10 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
     private fun launchEditActivity(item: PlaylistItem) {
         val intent = Intent(this, MultiImageCropActivity::class.java)
-
-        // ALWAYS pass original URI so we can zoom out
         intent.data = item.originalUri
-
-        // Pass saved state if it exists
         if (item.matrixState != null) {
             intent.putExtra("MATRIX_STATE", item.matrixState)
         }
-
         editImageLauncher.launch(intent)
     }
 
@@ -143,10 +213,8 @@ class PlaylistEditorActivity : AppCompatActivity() {
                     val destFile = File(playlistDir, "wallpaper_$index.jpg")
 
                     if (item.isEdited && item.editedFilePath != null) {
-                        // Copy manually cropped image
                         File(item.editedFilePath!!).copyTo(destFile, overwrite = true)
                     } else {
-                        // Auto-crop (Center Crop)
                         val bitmap = decodeCenterCropBitmap(item.originalUri)
                         if (bitmap != null) {
                             FileOutputStream(destFile).use { out ->
@@ -156,14 +224,13 @@ class PlaylistEditorActivity : AppCompatActivity() {
                     }
                 }
 
-                // Set the first image as the main active wallpaper
+                // Set main wallpaper
                 val firstFile = File(playlistDir, "wallpaper_0.jpg")
                 val activeWallpaper = File(filesDir, "wallpaper.jpg")
                 if (firstFile.exists()) {
                     firstFile.copyTo(activeWallpaper, overwrite = true)
                 }
 
-                // Set lock screen prefs
                 getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE).edit().clear().apply()
 
                 runOnUiThread {
@@ -185,13 +252,11 @@ class PlaylistEditorActivity : AppCompatActivity() {
         }.start()
     }
 
-    // --- Helper to Auto-Crop unedited images to screen size ---
     private fun decodeCenterCropBitmap(uri: Uri): Bitmap? {
         val metrics = windowManager.currentWindowMetrics.bounds
         val reqW = metrics.width()
         val reqH = metrics.height()
 
-        // 1. Load scaled down
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
 
@@ -202,16 +267,13 @@ class PlaylistEditorActivity : AppCompatActivity() {
             BitmapFactory.decodeStream(it, null, options)
         } ?: return null
 
-        // 2. Rotate
         bitmap = handleExifRotation(this, uri, bitmap)
 
-        // 3. Center Crop Logic
         val bitmapRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
         val screenRatio = reqW.toFloat() / reqH.toFloat()
 
         val matrix = Matrix()
         val scale: Float
-
         if (bitmapRatio > screenRatio) {
             scale = reqH.toFloat() / bitmap.height.toFloat()
         } else {
@@ -221,7 +283,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
         matrix.setScale(scale, scale)
         val scaledBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 
-        // Crop center
         val x = max(0, (scaledBitmap.width - reqW) / 2)
         val y = max(0, (scaledBitmap.height - reqH) / 2)
         val finalW = min(reqW, scaledBitmap.width - x)
@@ -230,9 +291,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
         return Bitmap.createBitmap(scaledBitmap, x, y, finalW, finalH)
     }
 
-    // Reuse rotation logic from other activities...
     private fun handleExifRotation(context: Context, uri: Uri, bitmap: Bitmap): Bitmap {
-        // (Use same logic as in CropActivity)
         try {
             val input = context.contentResolver.openInputStream(uri) ?: return bitmap
             val exif = ExifInterface(input)
@@ -265,7 +324,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
     }
 
     private fun isServiceActive(): Boolean {
-        // Reuse checking logic
         val wm = WallpaperManager.getInstance(this)
         val info = wm.wallpaperInfo ?: return false
         val activeClass = info.component.className
@@ -280,7 +338,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
     }
 
     private fun activateService() {
-        // Reuse activation logic
         try {
             val serviceClass = when(effectId) {
                 "ORIGINAL" -> AtmosphereService::class.java
