@@ -36,7 +36,7 @@ class MultiImageCropActivity : AppCompatActivity() {
     private var currentIndex = 0
 
     private lateinit var cropView: TouchImageView
-    private lateinit var btnNext: Button
+    private lateinit var btnDone: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +47,7 @@ class MultiImageCropActivity : AppCompatActivity() {
         windowController.hide(WindowInsetsCompat.Type.systemBars())
         windowController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-        setContentView(R.layout.activity_crop_blur_to_sharp)
+        setContentView(R.layout.activity_crop_multi)
 
         effectId = intent.getStringExtra("EFFECT_ID") ?: "ORIGINAL"
 
@@ -64,36 +64,21 @@ class MultiImageCropActivity : AppCompatActivity() {
         }
 
         cropView = findViewById(R.id.cropImageView)
-        btnNext = findViewById(R.id.btnSaveCrop)
+        btnDone = findViewById(R.id.btnSaveCrop)
 
         clearPlaylist()
 
         loadCurrentImage()
 
-        btnNext.setOnClickListener {
+        btnDone.setOnClickListener {
             val croppedBitmap = cropView.getCroppedBitmap()
             saveToPlaylist(croppedBitmap)
-
-            if (currentIndex < imageUris.size - 1) {
-                // Move to next image
-                currentIndex++
-                loadCurrentImage()
-            } else {
-                saveFixedWallpaper(croppedBitmap)
-                showApplyDialog()
-            }
+            finish()
         }
     }
 
     private fun loadCurrentImage() {
         val uri = imageUris[currentIndex]
-        val progress = "${currentIndex + 1}/${imageUris.size}"
-
-        if (currentIndex == imageUris.size - 1) {
-            btnNext.text = "Finish & Apply ($progress)"
-        } else {
-            btnNext.text = "Next Image ($progress)"
-        }
 
         Thread {
             val bitmap = decodeSampledBitmapFromUri(this, uri, 4096, 4096)
