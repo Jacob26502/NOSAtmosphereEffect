@@ -6,10 +6,13 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Button
-import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.exifinterface.media.ExifInterface
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.TouchImageView
@@ -23,78 +26,53 @@ class MultiImageCropActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Make it full screen like CropActivity
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        val windowController = WindowCompat.getInsetsController(window, window.decorView)
+        windowController.hide(WindowInsetsCompat.Type.systemBars())
+        windowController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
         setContentView(R.layout.activity_crop_multi)
 
-        cropView = findViewById(R.id.cropView)
-        val btnDone = findViewById<Button>(R.id.btnDone)
-        val btnCancel = findViewById<ImageButton>(R.id.btnCancel)
+        cropView = findViewById(R.id.cropImageView)
+        val btnDone = findViewById<Button>(R.id.btnSaveCrop) // Ensure ID matches layout
 
-        // Get the URI and any saved Matrix state
         sourceUri = intent.data
-        val savedMatrixValues = intent.getFloatArrayExtra("MATRIX_VALUES")
+        val savedMatrix = intent.getFloatArrayExtra("MATRIX_STATE") // Receive State
 
         if (sourceUri != null) {
-            loadImage(sourceUri!!, savedMatrixValues)
-        }
-
-        btnCancel.setOnClickListener {
-            setResult(RESULT_CANCELED)
+            loadImage(sourceUri!!, savedMatrix)
+        } else {
+            Toast.makeText(this, "No Image Data Found", Toast.LENGTH_SHORT).show()
             finish()
         }
 
         btnDone.setOnClickListener {
-            // 1. Get current zoom state (Matrix)
-            val currentMatrix = Matrix()
-            cropView.matrix.getValues(mapValues)
-            // Note: TouchImageView might use its own internal matrix tracking,
-            // but usually cropping returns the bitmap based on what is seen.
-
-            // 2. Get cropped bitmap
             val croppedBitmap = cropView.getCroppedBitmap()
-
-            // 3. Get the Matrix values representing current zoom/pan
-            // We need to fetch it from the view. TouchImageView usually exposes it.
-            // If getMatrix() returns the identity, we might need a different approach,
-            // but typically this works for restoration.
-            val matrixValues = FloatArray(9)
-            cropView.matrix.getValues(matrixValues)
-
             if (croppedBitmap != null) {
-                saveAndReturnResult(croppedBitmap, matrixValues)
+                // Get the current zoom state to save it
+                val currentMatrix = cropView.getCurrentMatrixValues()
+                saveAndReturnResult(croppedBitmap, currentMatrix)
             } else {
                 Toast.makeText(this, "Error cropping image", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    // Temp array for matrix values
-    private val mapValues = FloatArray(9)
-
-    private fun loadImage(uri: Uri, matrixValues: FloatArray?) {
+    private fun loadImage(uri: Uri, savedMatrix: FloatArray?) {
         try {
             val inputStream = contentResolver.openInputStream(uri)
             val bitmap = BitmapFactory.decodeStream(inputStream)
             inputStream?.close()
 
             // Handle Rotation
-            val finalBitmap = handleExifRotation(uri, bitmap)
+            val rotatedBitmap = handleExifRotation(uri, bitmap)
 
-            // Set image
-            cropView.setImageBitmap(finalBitmap)
-
-            // Restore Zoom State if available
-            if (matrixValues != null) {
-                val matrix = Matrix()
-                matrix.setValues(matrixValues)
-                // We use a post block to ensure view has dimensions before applying matrix
-                cropView.post {
-                    cropView.imageMatrix = matrix
-                    // TouchImageView specific: If it has a specific method to set zoom from matrix
-                    // we should use it. Assuming standard ImageView matrix behavior here
-                    // combined with TouchImageView's matrix handling.
-                    cropView.invalidate()
-                }
-            }
+            // KEY FIX: Use setInitialImage instead of setImageBitmap
+            // This initializes bounds and restores zoom state if provided
+            cropView.setInitialImage(rotatedBitmap, savedMatrix)
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -114,7 +92,9 @@ class MultiImageCropActivity : AppCompatActivity() {
 
             val resultIntent = Intent()
             resultIntent.putExtra("CROPPED_IMAGE_PATH", destFile.absolutePath)
-            resultIntent.putExtra("MATRIX_VALUES", matrixValues) // Return state
+            // Return the Matrix State so we can zoom out later
+            resultIntent.putExtra("MATRIX_STATE", matrixValues)
+
             setResult(RESULT_OK, resultIntent)
             finish()
         } catch (e: Exception) {

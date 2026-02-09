@@ -22,14 +22,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.app.nosatmosphereeffect.MainActivity
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.PlaylistAdapter
-import com.app.nosatmosphereeffect.helper.PlaylistItem
 import com.app.nosatmosphereeffect.service.AtmosphereService
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
 import com.app.nosatmosphereeffect.service.FrostedService
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 import kotlin.math.max
 import kotlin.math.min
 
@@ -40,19 +38,24 @@ class PlaylistEditorActivity : AppCompatActivity() {
     private var effectId: String = "ORIGINAL"
     private var editingPosition = -1
 
+    data class PlaylistItem(
+        val originalUri: Uri,
+        var isEdited: Boolean = false,
+        var editedFilePath: String? = null,
+        var matrixState: FloatArray? = null // Add this field
+    )
+
     // Handle return from Crop Activity
     private val editImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val resultUriString = result.data?.getStringExtra("CROPPED_IMAGE_PATH")
-            val matrixValues = result.data?.getFloatArrayExtra("MATRIX_VALUES")
+            val matrixState = result.data?.getFloatArrayExtra("MATRIX_STATE") // Retrieve State
 
             if (resultUriString != null && editingPosition != -1 && editingPosition < playlistItems.size) {
                 val item = playlistItems[editingPosition]
-
-                // Update Path AND State
                 item.isEdited = true
                 item.editedFilePath = resultUriString
-                item.matrixValues = matrixValues
+                item.matrixState = matrixState // Save State
 
                 adapter.notifyItemChanged(editingPosition)
             }
@@ -112,12 +115,12 @@ class PlaylistEditorActivity : AppCompatActivity() {
     private fun launchEditActivity(item: PlaylistItem) {
         val intent = Intent(this, MultiImageCropActivity::class.java)
 
-        // ALWAYS pass Original URI to allow zooming out / re-cropping from scratch
+        // ALWAYS pass original URI so we can zoom out
         intent.data = item.originalUri
 
         // Pass saved state if it exists
-        if (item.matrixValues != null) {
-            intent.putExtra("MATRIX_VALUES", item.matrixValues)
+        if (item.matrixState != null) {
+            intent.putExtra("MATRIX_STATE", item.matrixState)
         }
 
         editImageLauncher.launch(intent)

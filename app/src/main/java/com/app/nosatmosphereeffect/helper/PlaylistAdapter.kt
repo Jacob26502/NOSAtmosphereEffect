@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.app.nosatmosphereeffect.R
+import com.app.nosatmosphereeffect.activity.PlaylistEditorActivity
 import java.util.concurrent.Executors
 
 data class PlaylistItem(
@@ -23,7 +24,7 @@ data class PlaylistItem(
 
 class PlaylistAdapter(
     private val context: Context,
-    private val items: MutableList<PlaylistItem>,
+    private val items: MutableList<PlaylistEditorActivity.PlaylistItem>,
     private val onItemClick: (Int) -> Unit,
     private val onDeleteClick: (Int) -> Unit
 ) : RecyclerView.Adapter<PlaylistAdapter.ViewHolder>() {
