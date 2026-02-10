@@ -218,16 +218,14 @@ class BlurToSharpCropActivity : AppCompatActivity() {
                 saveFixedWallpaper(bitmap)
 
                 runOnUiThread {
-                    if (isServiceActive()) {
-                        val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
-                        intent.setPackage(packageName)
-                        sendBroadcast(intent)
-                        Toast.makeText(this, "Wallpaper Updated!", Toast.LENGTH_SHORT).show()
-                        goHome()
-                    } else {
-                        Toast.makeText(this, "Image saved! Please activate the wallpaper.", Toast.LENGTH_LONG).show()
-                        activateService()
-                    }
+                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+                    val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
+                    intent.setPackage(packageName)
+                    sendBroadcast(intent)
+
+                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+
+                    activateService()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -244,20 +242,6 @@ class BlurToSharpCropActivity : AppCompatActivity() {
         bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
         out.flush()
         out.close()
-    }
-
-    private fun isServiceActive(): Boolean {
-        val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo ?: return false
-
-        val activeClass = info.component.className
-        val targetClass = if (effectId == "FROSTED_REVERSE") {
-            FrostedReverseService::class.java.name
-        } else {
-            BlurToSharpService::class.java.name
-        }
-
-        return activeClass == targetClass
     }
 
     private fun activateService() {

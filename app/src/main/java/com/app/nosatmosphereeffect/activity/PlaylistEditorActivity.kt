@@ -9,7 +9,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
-import android.util.DisplayMetrics
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
@@ -21,13 +20,13 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.app.nosatmosphereeffect.MainActivity
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.PlaylistAdapter
 import com.app.nosatmosphereeffect.service.AtmosphereService
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
 import com.app.nosatmosphereeffect.service.FrostedService
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.max
@@ -113,11 +112,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
         btnAddMore.setOnClickListener { pickMultipleImages.launch("image/*") }
 
         btnApplyAll.setOnClickListener {
-            if (playlistItems.isEmpty()) {
-                Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show()
-            } else {
-                applyPlaylist()
-            }
+           showApplyDialog()
         }
 
         if (savedInstanceState != null) {
@@ -233,13 +228,15 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     progressDialog.dismiss()
-                    if (isServiceActive()) {
-                        sendBroadcast(Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER"))
-                        Toast.makeText(this, "Playlist Updated!", Toast.LENGTH_SHORT).show()
-                        goHome()
-                    } else {
-                        activateService()
-                    }
+                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+                    val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
+                    intent.setPackage(packageName)
+                    sendBroadcast(intent)
+
+                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+
+                    // Proceed to "Reapply" by showing the preview screen
+                    activateService()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -321,20 +318,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
         return inSampleSize
     }
 
-    private fun isServiceActive(): Boolean {
-        val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo ?: return false
-        val activeClass = info.component.className
-        val targetClass = when(effectId) {
-            "ORIGINAL" -> AtmosphereService::class.java.name
-            "REVERSE" -> BlurToSharpService::class.java.name
-            "FROSTED" -> FrostedService::class.java.name
-            "FROSTED_REVERSE" -> FrostedReverseService::class.java.name
-            else -> AtmosphereService::class.java.name
-        }
-        return activeClass == targetClass
-    }
-
     private fun activateService() {
         try {
             val serviceClass = when(effectId) {
@@ -354,10 +337,22 @@ class PlaylistEditorActivity : AppCompatActivity() {
         }
     }
 
-    private fun goHome() {
-        val intent = Intent(this, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        startActivity(intent)
-        finish()
+    private fun showApplyDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Apply Wallpaper")
+            .setMessage("In the next screen, please select:\n\nSet Wallpaper > Home Screen and Lock Screen.\n\n(This ensures the lock screen effect works correctly).")
+            .setPositiveButton("Set Wallpaper") { _, _ ->
+                applyFromDialog()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun applyFromDialog(){
+        if (playlistItems.isEmpty()) {
+            Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show()
+        } else {
+            applyPlaylist()
+        }
     }
 }

@@ -265,19 +265,16 @@ class CropActivity : AppCompatActivity() {
                 }
 
                 runOnUiThread {
-                    if (isServiceActive()) {
-                        val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
-                        intent.setPackage(packageName)
-                        sendBroadcast(intent)
+                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+                    val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
+                    intent.setPackage(packageName)
+                    sendBroadcast(intent)
 
-                        val msg = if (setLockScreen) "Home & Lock Updated!" else "Home Screen Updated!"
-                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                        goHome()
-                    } else {
-                        Toast.makeText(this, "Setup complete! Now activate Home Screen.", Toast.LENGTH_LONG).show()
-                        activateService()
-                    }
+                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+
+                    activateService()
                 }
+
             } catch (e: Exception) {
                 runOnUiThread {
                     Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
@@ -336,20 +333,6 @@ class CropActivity : AppCompatActivity() {
                 resolver.update(uri, contentValues, null, null)
             }
         } catch (e: Exception) { Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
-    }
-
-    private fun isServiceActive(): Boolean {
-        val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo ?: return false
-
-        val activeClass = info.component.className
-        val targetClass = if (effectId == "FROSTED") {
-            FrostedService::class.java.name
-        } else {
-            AtmosphereService::class.java.name
-        }
-
-        return activeClass == targetClass
     }
 
     private fun activateService() {

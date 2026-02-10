@@ -77,20 +77,8 @@ class MainActivity : AppCompatActivity() {
             applyBlurUpdate()
         }
 
-        val playlistDir = File(filesDir, "playlist")
-        if (playlistDir.exists() && playlistDir.isDirectory) {
-            val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
-            if (!files.isNullOrEmpty() && files.size > 1) {
-                btnRotationInterval.visibility = View.VISIBLE
-                btnRotationInterval.setOnClickListener {
-                    showRotationIntervalDialog()
-                }
-            }else{
-                btnRotationInterval.visibility = View.GONE
-            }
-
-        }else{
-            btnRotationInterval.visibility = View.GONE
+        btnRotationInterval.setOnClickListener {
+            showRotationIntervalDialog()
         }
     }
 
@@ -134,9 +122,22 @@ class MainActivity : AppCompatActivity() {
             } else {
                 cardBlurSettings.visibility = View.GONE
             }
+            val playlistDir = File(filesDir, "playlist")
+            if (playlistDir.exists() && playlistDir.isDirectory) {
+                val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+                if (!files.isNullOrEmpty() && files.size > 1) {
+                    btnRotationInterval.visibility = View.VISIBLE
+                }else{
+                    btnRotationInterval.visibility = View.GONE
+                }
+
+            }else{
+                btnRotationInterval.visibility = View.GONE
+            }
         } else {
             btnMainAction.setText(R.string.action_select_effect)
             layoutSettings.visibility = View.GONE
+            btnRotationInterval.visibility = View.GONE
         }
     }
     private fun updateButtonState(sliderValue: Float) {

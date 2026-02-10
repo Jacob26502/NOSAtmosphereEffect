@@ -22,12 +22,12 @@ Open the app and choose your desired atmosphere style from the selection screen:
 * **Simple Frosted (Reverse):** Elegant clarity. Wakes up from a heavy frosted blur into a crystal clear wallpaper.
 
 ### 2\. Select Image & Playlist Mode
-   After selecting an effect, you will be prompted to choose your wallpaper mode:
+After selecting an effect, you will be prompted to choose your wallpaper mode:
 
 * **Single Image:** Standard mode. Pick one image, crop it, and apply.
 
-* **Multiple Images (Playlist):** Select multiple images from your gallery to create a Wallpaper Playlist. 
-* You will crop each image one by one. 
+* **Multiple Images (Playlist):** Select multiple images from your gallery to create a Wallpaper Playlist.
+* You can simply apply the play list as it or adjust & crop any image from the playlist you want.
 * Once finished, the app will automatically rotate through these wallpapers based on your settings.
 
 
@@ -46,7 +46,7 @@ The setup process differs slightly depending on which effect you selected. Pleas
 2.  **Activate Live Wallpaper:**
     * The app will redirect you to the Android System's Live Wallpaper preview.
     * Tap **"Set Wallpaper"**.
-    * **MANDATORY:** You must select **ONLY "Home Screen"** (It'll also work fine for most of the devices if you select Home Screen and Lock Screen).
+    * **MANDATORY:** You must select **ONLY "Home Screen"** (It'll also work fine for most of the devices if you select Home Screen and Lock Screen and always select Home Screen and Lock Screen in Playlist Mode).
     * *> Why? The Original effect works by transitioning from a static Lock Screen image to the Live Wallpaper on the Home Screen.*
 
 #### 🅱️ If you chose "Blur -> Sharp Effect":
@@ -63,8 +63,8 @@ Take full control of the animation and look. You can now tweak the following set
 * **Dimness Level:** Adjust the darkening overlay to ensure your home screen icons remain readable against bright wallpapers.
 * **Blur Strength:** (Frosted Effects Only) Use the slider to fine-tune the intensity of the blur radius, from a light mist to heavy glass.
 * **Experimental Grain (Noise):** Enable a film-grain texture on top of the blur. You can customize:
-  * **Noise Strength:** How visible the grain is.
-  * **Noise Scale:** The size/coarseness of the grain particles.
+    * **Noise Strength:** How visible the grain is.
+    * **Noise Scale:** The size/coarseness of the grain particles.
 ### Animation & Behavior
 * **Animation Duration:** Control the total transition duration.
 * **Lock Delay (Anti-Flicker):** Adds a configurable pause before the wallpaper resets when you lock the phone. This prevents the visual glitch where the wallpaper "snaps" back to its initial state before the screen turns fully black.
@@ -72,9 +72,12 @@ Take full control of the animation and look. You can now tweak the following set
 ### Playlist & Rotation
 (Only available when using Multiple Images mode)
 * **Rotation Interval:** Controls how often the wallpaper changes from your playlist.
-  * **Options:** Every Lock (Instant), 15 Minutes, 1 Hour, up to 24 Hours.
-  * **Smart Rotation:** To prevent lag or visual glitches, the wallpaper only rotates when the screen is OFF.
-  * *Example:* If you set "15 Minutes", the app checks the time whenever you lock your phone. If 15 minutes have passed since the last change, it swaps the wallpaper in the background so it's ready the next time you unlock.
+    * **Options:** Every Lock (Instant), 15 Minutes, 1 Hour, up to 24 Hours.
+    * **Smart Rotation:** To prevent lag or visual glitches, the wallpaper only rotates when the screen is OFF.
+    * *Example:* If you set "15 Minutes", the app checks the time whenever you lock your phone. If 15 minutes have passed since the last change, it swaps the wallpaper in the background so it's ready the next time you unlock.
+
+## Telegram Group
+I've made a telegram group for the discussion of issues and feature suggestion. You can join it using [this link](https://t.me/atmosphereEffect).
 
 ## Known Issues
 
