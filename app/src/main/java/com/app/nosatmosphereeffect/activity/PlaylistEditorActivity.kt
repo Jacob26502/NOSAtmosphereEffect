@@ -9,7 +9,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
-import android.util.DisplayMetrics
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
@@ -21,13 +20,13 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.app.nosatmosphereeffect.MainActivity
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.PlaylistAdapter
 import com.app.nosatmosphereeffect.service.AtmosphereService
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
 import com.app.nosatmosphereeffect.service.FrostedService
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.max
@@ -113,11 +112,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
         btnAddMore.setOnClickListener { pickMultipleImages.launch("image/*") }
 
         btnApplyAll.setOnClickListener {
-            if (playlistItems.isEmpty()) {
-                Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show()
-            } else {
-                applyPlaylist()
-            }
+           showApplyDialog()
         }
 
         if (savedInstanceState != null) {
@@ -335,10 +330,22 @@ class PlaylistEditorActivity : AppCompatActivity() {
         }
     }
 
-    private fun goHome() {
-        val intent = Intent(this, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        startActivity(intent)
-        finish()
+    private fun showApplyDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Apply Wallpaper")
+            .setMessage("In the next screen, please select:\n\nSet Wallpaper > Home Screen and Lock Screen.\n\n(This ensures the lock screen effect works correctly).")
+            .setPositiveButton("Set Wallpaper") { _, _ ->
+                applyFromDialog()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun applyFromDialog(){
+        if (playlistItems.isEmpty()) {
+            Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show()
+        } else {
+            applyPlaylist()
+        }
     }
 }
