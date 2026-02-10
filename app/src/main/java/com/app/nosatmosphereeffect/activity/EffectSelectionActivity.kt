@@ -90,26 +90,16 @@ class EffectSelectionActivity : AppCompatActivity() {
     }
 
     private fun launchMultiCropActivity(uris: ArrayList<Uri>) {
-        val intent = Intent(this, MultiImageCropActivity::class.java)
+        val intent = Intent(this, PlaylistEditorActivity::class.java) // CHANGED HERE
 
-        // --- KEY FIX: CLIP DATA PERMISSIONS ---
-        // 1. Set the first URI as the primary data
         intent.data = uris[0]
-
-        // 2. Create ClipData containing ALL URIs
-        // This is the mechanism Android uses to understand which files to grant permission for.
         val clipData = ClipData.newUri(contentResolver, "Images", uris[0])
         for (i in 1 until uris.size) {
             clipData.addItem(ClipData.Item(uris[i]))
         }
         intent.clipData = clipData
-
-        // 3. Grant permissions (Now applies to everything in ClipData)
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-        // 4. Pass the list for easy indexing in the next activity
         intent.putParcelableArrayListExtra("IMAGE_URIS", uris)
-
         intent.putExtra("EFFECT_ID", selectedEffectId)
         startActivity(intent)
         finish()

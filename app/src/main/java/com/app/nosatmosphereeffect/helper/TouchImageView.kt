@@ -55,7 +55,6 @@ class TouchImageView @JvmOverloads constructor(
 
         // --- 1. CAPTURE REAL SCREEN SIZE ---
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
         val metrics = windowManager.currentWindowMetrics
         targetWidth = metrics.bounds.width()
         targetHeight = metrics.bounds.height()
@@ -103,7 +102,7 @@ class TouchImageView @JvmOverloads constructor(
     }
 
     // --- 2. SETUP IMAGE TO FILL SCREEN RESOLUTION ---
-    fun setInitialImage(bitmap: Bitmap) {
+    fun setInitialImage(bitmap: Bitmap, savedMatrixValues: FloatArray? = null) {
         super.setImageBitmap(bitmap)
         origWidth = bitmap.width.toFloat()
         origHeight = bitmap.height.toFloat()
@@ -113,27 +112,44 @@ class TouchImageView @JvmOverloads constructor(
             viewWidth = width.toFloat()
             viewHeight = height.toFloat()
 
+            // Calculate standard center-crop scale (minScale)
             val scaleX = targetWidth.toFloat() / origWidth
             val scaleY = targetHeight.toFloat() / origHeight
-
-            // "max" ensures we fill the screen (Center Crop)
             val scale = max(scaleX, scaleY)
 
-            matrixCurrent.setScale(scale, scale)
-
-            // Center the image in the view
-            val redundantYSpace = viewHeight - (scale * origHeight)
-            val redundantXSpace = viewWidth - (scale * origWidth)
-            matrixCurrent.postTranslate(redundantXSpace / 2, redundantYSpace / 2)
-
-            saveScale = scale
             minScale = scale
+
+            if (savedMatrixValues != null) {
+                // RESTORE STATE
+                matrixCurrent.setValues(savedMatrixValues)
+                // Restore saveScale from the matrix (MSCALE_X is at index 0)
+                saveScale = savedMatrixValues[Matrix.MSCALE_X]
+
+                // Ensure we don't start invalid
+                if (saveScale < minScale) saveScale = minScale
+            } else {
+                // FRESH START (Center Crop)
+                matrixCurrent.reset()
+                matrixCurrent.setScale(scale, scale)
+
+                // Center the image
+                val redundantYSpace = viewHeight - (scale * origHeight)
+                val redundantXSpace = viewWidth - (scale * origWidth)
+                matrixCurrent.postTranslate(redundantXSpace / 2, redundantYSpace / 2)
+
+                saveScale = scale
+            }
 
             imageMatrix = matrixCurrent
             fixTrans()
         }
     }
 
+    fun getCurrentMatrixValues(): FloatArray {
+        val values = FloatArray(9)
+        matrixCurrent.getValues(values)
+        return values
+    }
 
     fun getCroppedBitmap(): Bitmap {
         val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)

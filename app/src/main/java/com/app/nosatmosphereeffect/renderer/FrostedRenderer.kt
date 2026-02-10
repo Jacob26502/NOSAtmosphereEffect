@@ -142,7 +142,6 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
         GLES30.glUseProgram(programId)
 
-        val t = blurStrength.coerceIn(0f, 1f)
 
 
         // MOVEMENT CURVE: Fast Start, Slow Settle
