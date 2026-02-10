@@ -219,6 +219,12 @@ class BlurToSharpCropActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+                    val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
+                    intent.setPackage(packageName)
+                    sendBroadcast(intent)
+
+                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+
                     activateService()
                 }
             } catch (e: Exception) {
