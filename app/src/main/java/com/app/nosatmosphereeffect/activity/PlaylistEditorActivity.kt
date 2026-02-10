@@ -233,13 +233,8 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     progressDialog.dismiss()
-                    if (isServiceActive()) {
-                        sendBroadcast(Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER"))
-                        Toast.makeText(this, "Playlist Updated!", Toast.LENGTH_SHORT).show()
-                        goHome()
-                    } else {
-                        activateService()
-                    }
+                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
+                    activateService()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -319,20 +314,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
             }
         }
         return inSampleSize
-    }
-
-    private fun isServiceActive(): Boolean {
-        val wm = WallpaperManager.getInstance(this)
-        val info = wm.wallpaperInfo ?: return false
-        val activeClass = info.component.className
-        val targetClass = when(effectId) {
-            "ORIGINAL" -> AtmosphereService::class.java.name
-            "REVERSE" -> BlurToSharpService::class.java.name
-            "FROSTED" -> FrostedService::class.java.name
-            "FROSTED_REVERSE" -> FrostedReverseService::class.java.name
-            else -> AtmosphereService::class.java.name
-        }
-        return activeClass == targetClass
     }
 
     private fun activateService() {
