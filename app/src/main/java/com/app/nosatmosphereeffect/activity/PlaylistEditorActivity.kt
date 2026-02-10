@@ -1,6 +1,5 @@
 package com.app.nosatmosphereeffect.activity
 
-import android.app.ProgressDialog
 import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
@@ -84,7 +83,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
         setContentView(R.layout.activity_playlist_editor)
 
         effectId = intent.getStringExtra("EFFECT_ID") ?: "ORIGINAL"
-        val uris = intent.getParcelableArrayListExtra<Uri>("IMAGE_URIS")
+        val uris = intent.getParcelableArrayListExtra("IMAGE_URIS", Uri::class.java)
 
         if (uris != null) {
             uris.forEach { playlistItems.add(PlaylistItem(it)) }
@@ -133,9 +132,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
         snapHelper.attachToRecyclerView(recycler)
 
         recycler.post {
-            val displayMetrics = DisplayMetrics()
-            windowManager.defaultDisplay.getMetrics(displayMetrics)
-            val screenWidth = displayMetrics.widthPixels
+            val screenWidth = windowManager.currentWindowMetrics.bounds.width()
             val cardWidthPx = (300 * resources.displayMetrics.density).toInt()
             val cardMarginPx = (16 * resources.displayMetrics.density).toInt()
             val totalItemWidth = cardWidthPx + cardMarginPx
@@ -172,10 +169,29 @@ class PlaylistEditorActivity : AppCompatActivity() {
     }
 
     private fun applyPlaylist() {
-        val progress = ProgressDialog(this)
-        progress.setMessage("Processing playlist...")
-        progress.setCancelable(false)
-        progress.show()
+        val loadingView = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            setPadding(50, 50, 50, 50)
+            gravity = android.view.Gravity.CENTER_VERTICAL
+
+            addView(android.widget.ProgressBar(this@PlaylistEditorActivity).apply {
+                isIndeterminate = true
+            })
+
+            addView(android.widget.TextView(this@PlaylistEditorActivity).apply {
+                text = "Processing playlist..."
+                textSize = 16f
+                setPadding(40, 0, 0, 0)
+                setTextColor(android.graphics.Color.WHITE) // Adjust based on your theme
+            })
+        }
+
+        val progressDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(loadingView)
+            .setCancelable(false)
+            .create()
+
+        progressDialog.show()
 
         Thread {
             try {
@@ -216,7 +232,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
                 getSharedPreferences("app_prefs", Context.MODE_PRIVATE).edit().clear().apply()
 
                 runOnUiThread {
-                    progress.dismiss()
+                    progressDialog.dismiss()
                     if (isServiceActive()) {
                         sendBroadcast(Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER"))
                         Toast.makeText(this, "Playlist Updated!", Toast.LENGTH_SHORT).show()
@@ -227,7 +243,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    progress.dismiss()
+                    progressDialog.dismiss()
                     Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
