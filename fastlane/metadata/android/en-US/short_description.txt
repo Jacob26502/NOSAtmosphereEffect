@@ -1,0 +1,1 @@
+Replicate the dynamic 'Atmosphere' unlock transition effect from Nothing OS.

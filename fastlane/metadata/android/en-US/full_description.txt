@@ -1,0 +1,15 @@
+Bring the distinctive "Atmosphere" transition effect to your device.
+
+NOS Atmosphere Effect is an open-source live wallpaper engine designed to replicate the dynamic transition found in Nothing OS. When you unlock your device, your wallpaper smoothly shifts from a moody, blurred abstract view to a sharp, clear home screen.
+
+Features:
+• Original Atmosphere: Drifting ambient clouds that transition to a sharp view on unlock.
+• Reverse Atmosphere: A deep, moody alternative that fades from clear to atmospheric clouds.
+• Simple Frosted: A clean, uniform frosted glass effect for a minimal look.
+• Playlist Mode: Select multiple wallpapers and have them rotate automatically.
+• Customization: Fine-tune the experience with sliders for blur strength, grain/noise texture, and zoom levels.
+
+Privacy & Performance:
+• Completely Open Source (MIT License).
+• No Internet Permission required.
+• Efficient battery usage using OpenGL.
