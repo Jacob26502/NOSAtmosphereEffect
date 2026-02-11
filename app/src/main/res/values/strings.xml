@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">Atmosphere Effect</string>
+    <string name="app_name">Atmo Engine</string>
 
-    <string name="app_title">Atmosphere Effect</string>
+    <string name="app_title">Atmo Engine</string>
     <string name="app_logo_desc">App Logo</string>
     <string name="status_instruction">Select an effect style and image to\ncreate your custom live wallpaper.</string>
     <string name="action_select_effect">Select Effect</string>
