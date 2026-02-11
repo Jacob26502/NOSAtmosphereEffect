@@ -1,6 +1,6 @@
-# NOS Atmosphere Effect
+# Atmosphere Effect
 
-**NOS Atmosphere Effect** is an Android application designed to replicate the distinctive "Atmosphere" transition effect found in Nothing OS.
+**Atmosphere Effect** is an Android application designed to replicate the distinctive "Atmosphere" transition effect found in Nothing OS.
 ## ⚠️ Device Support & Disclaimer
 
 **Current Testing Status:**
