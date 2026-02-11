@@ -21,6 +21,7 @@ Open the app and choose your desired atmosphere style from the selection screen:
 * **Simple Frosted:** Modern minimalism. Applies a clean, uniform frosted glass blur (no clouds).
 * **Simple Frosted (Reverse):** Elegant clarity. Wakes up from a heavy frosted blur into a crystal clear wallpaper.
 
+
 ### 2\. Select Image & Playlist Mode
 After selecting an effect, you will be prompted to choose your wallpaper mode:
 
@@ -75,6 +76,15 @@ Take full control of the animation and look. You can now tweak the following set
     * **Options:** Every Lock (Instant), 15 Minutes, 1 Hour, up to 24 Hours.
     * **Smart Rotation:** To prevent lag or visual glitches, the wallpaper only rotates when the screen is OFF.
     * *Example:* If you set "15 Minutes", the app checks the time whenever you lock your phone. If 15 minutes have passed since the last change, it swaps the wallpaper in the background so it's ready the next time you unlock.
+
+## Screenshots
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/5ca9fd98-880a-4377-973b-9192771aa185" width="45%" alt="1st" />
+  <img src="https://github.com/user-attachments/assets/e8bda8f0-821d-43c4-8194-421916560c64" width="45%" alt="2nd" />
+  <br/>
+  <img src="https://github.com/user-attachments/assets/160d8da4-fe29-40f2-90c1-74f0fc003fdc" width="45%" alt="3rd" />
+  <img src="https://github.com/user-attachments/assets/97ce05a1-9315-4371-b3c6-741e3a15c54c" width="45%" alt="4th" />
+</div>
 
 ## Telegram Group
 I've made a telegram group for the discussion of issues and feature suggestion. You can join it using [this link](https://t.me/atmosphereEffect).
