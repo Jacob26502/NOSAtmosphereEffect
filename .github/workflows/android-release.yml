@@ -76,6 +76,14 @@ jobs:
         run: |
           mv "${{ steps.sign_app_33.outputs.signedFile }}" ./app-release-android-13+.apk
 
+      - name: Force Create/Update Tag
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          # -f forces the tag to move if it already exists
+          git tag -fa v${{ env.VERSION_NAME }} -m "Release v${{ env.VERSION_NAME }}"
+          git push origin v${{ env.VERSION_NAME }} --force
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
