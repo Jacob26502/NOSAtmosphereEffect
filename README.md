@@ -1,6 +1,6 @@
-# NOS Atmosphere Effect
+# Atmo Engine
 
-**NOS Atmosphere Effect** is an Android application designed to replicate the distinctive "Atmosphere" transition effect found in Nothing OS.
+**Atmo Engine** is an Android application designed to replicate the distinctive "Atmosphere" transition effect found in Nothing OS.
 ## ⚠️ Device Support & Disclaimer
 
 **Current Testing Status:**
