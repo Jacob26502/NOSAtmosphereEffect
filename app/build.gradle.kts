@@ -9,13 +9,27 @@ android {
 
     defaultConfig {
         applicationId = "com.saad_khan_rind.atmosphere_effect"
-        val targetSdkEnv = project.findProperty("targetSdkOverride")?.toString()?.toIntOrNull() ?: 36
-        targetSdk = targetSdkEnv
-        minSdk = if (targetSdkEnv >= 36) 36 else 33
-        val baseVersionCode = 27
-        val codeOffset = if (targetSdkEnv >= 36) 200000 else 100000
-        versionCode = baseVersionCode + codeOffset
-        versionName = "4.4.4"
+        versionName = "4.4.5"
+    }
+
+    flavorDimensions += "apiLevel"
+
+    productFlavors {
+
+        create("v36") {
+            dimension = "apiLevel"
+            minSdk = 36
+            targetSdk = 36
+            versionCode = 200028
+        }
+
+        create("v33") {
+            dimension = "apiLevel"
+            minSdk = 33
+            targetSdk = 33
+            versionCode = 100028
+        }
+
     }
 
     buildFeatures {
@@ -48,30 +62,18 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.exifinterface)
-    // Versions
-    val targetSdkEnv = project.findProperty("targetSdkOverride")?.toString()?.toIntOrNull() ?: 36
 
-    val coreKtxVersion: String
-    val lifecycleVersion: String
-    val appcompatVersion: String
-    val materialVersion: String
+    // --- Dependencies for v36 (API 36) ---
+    // These only apply when building the v36 flavor
+    "v36Implementation"("androidx.core:core-ktx:1.17.0")
+    "v36Implementation"("androidx.lifecycle:lifecycle-service:2.10.0")
+    "v36Implementation"("androidx.appcompat:appcompat:1.7.1")
+    "v36Implementation"("com.google.android.material:material:1.13.0")
 
-    if (targetSdkEnv >= 36) {
-        coreKtxVersion = "1.17.0"
-        lifecycleVersion = "2.10.0"
-        appcompatVersion = "1.7.1"
-        materialVersion = "1.13.0"
-    } else {
-        coreKtxVersion = "1.12.0"
-        lifecycleVersion = "2.6.2"
-        appcompatVersion = "1.6.1"
-        materialVersion = "1.11.0"
-    }
-
-    // Core Android
-    implementation("androidx.core:core-ktx:$coreKtxVersion")
-    implementation("androidx.lifecycle:lifecycle-service:$lifecycleVersion")
-
-    implementation("androidx.appcompat:appcompat:$appcompatVersion")
-    implementation("com.google.android.material:material:$materialVersion")
+    // --- Dependencies for v33 (API 33) ---
+    // These only apply when building the v33 flavor
+    "v33Implementation"("androidx.core:core-ktx:1.12.0")
+    "v33Implementation"("androidx.lifecycle:lifecycle-service:2.6.2")
+    "v33Implementation"("androidx.appcompat:appcompat:1.6.1")
+    "v33Implementation"("com.google.android.material:material:1.11.0")
 }

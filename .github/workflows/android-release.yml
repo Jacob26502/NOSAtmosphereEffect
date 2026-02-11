@@ -37,20 +37,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew assembleRelease
-
       - name: Install Android Build Tools
         run: echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;${{ env.BUILD_TOOLS_VERSION }}"
 
       - name: Build SDK 36 (High)
-        run: ./gradlew assembleRelease -PtargetSdkOverride=36
+        run: ./gradlew assembleV36Release
 
       - name: Sign SDK 36 APK
         uses: ilharp/sign-android-release@v2
         id: sign_app_36
         with:
-          releaseDir: app/build/outputs/apk/release
+          releaseDir: app/build/outputs/apk/v36/release
           signingKey: ${{ secrets.SIGNING_KEY }}
           keyAlias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -61,17 +58,14 @@ jobs:
         run: |
           mv "${{ steps.sign_app_36.outputs.signedFile }}" ./app-release-android-16+.apk
 
-      - name: Clean Build Directory
-        run: ./gradlew clean
-
       - name: Build SDK 33 (Legacy)
-        run: ./gradlew assembleRelease -PtargetSdkOverride=33
+        run: ./gradlew assembleV33Release
 
       - name: Sign SDK 33 APK
         uses: ilharp/sign-android-release@v2
         id: sign_app_33
         with:
-          releaseDir: app/build/outputs/apk/release
+          releaseDir: app/build/outputs/apk/v33/release
           signingKey: ${{ secrets.SIGNING_KEY }}
           keyAlias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
