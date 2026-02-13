@@ -10,7 +10,7 @@ android {
     defaultConfig {
         applicationId = "com.saad_khan_rind.atmosphere_effect"
         versionName = "4.4.7"
-        versionCode = 200030
+        versionCode = 100030
     }
 
     flavorDimensions += "apiLevel"
