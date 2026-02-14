@@ -83,7 +83,7 @@ Take full control of the animation and look. You can now tweak the following set
   <img src="https://github.com/user-attachments/assets/e8bda8f0-821d-43c4-8194-421916560c64" width="45%" alt="2nd" />
   <br/>
   <img src="https://github.com/user-attachments/assets/160d8da4-fe29-40f2-90c1-74f0fc003fdc" width="45%" alt="3rd" />
-  <img src="https://github.com/user-attachments/assets/97ce05a1-9315-4371-b3c6-741e3a15c54c" width="45%" alt="4th" />
+  <img src="https://github.com/user-attachments/assets/1e0734af-2e51-4941-9d03-42cd032099c0" width="45%" alt="4th" />
 </div>
 
 ## Telegram Group
