@@ -17,6 +17,21 @@ import javax.microedition.khronos.opengles.GL10
 
 class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
+    // --- RING BUFFER LOGIC ---
+    private class TextureSet {
+        var sharpId = 0
+        var blurId = 0
+        fun isValid() = sharpId != 0 && blurId != 0
+        fun reset() { sharpId = 0; blurId = 0 }
+    }
+
+    private var currentSet = TextureSet()
+    private var nextSet = TextureSet() // The "Back Buffer"
+
+    @Volatile private var pendingPlaylistBitmap: Bitmap? = null
+    // -------------------------
+
+
     var blurStrength: Float = 0.0f
         set(value) {
             field = value
@@ -27,17 +42,15 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
     @Volatile var noiseScale: Float = 2000.0f
     @Volatile var noiseStrength: Float = 0.06f
     @Volatile var blurRadius: Float = 200.0f
-    @Volatile private var isResetting = false
 
     private var programId: Int = 0
     private var blurProgramId: Int = 0
-    private var sharpTextureId: Int = 0
-    private var blurTextureId: Int = 0
     private var tempTextureId: Int = 0
     private var fboId: Int = 0
     private var aspectRatio: Float = 1.0f
-    fun resetAndClear(value: Float = 0.0f) {
-        isResetting = true
+
+    fun queuePlaylistTransition(bitmap: Bitmap, value: Float = 0.0f) {
+        pendingPlaylistBitmap = bitmap
         blurStrength = value
     }
 
@@ -96,23 +109,68 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
     }
 
     private fun loadAndApplyTextures() {
-        if (sharpTextureId != 0) {
-            val ids = intArrayOf(sharpTextureId, blurTextureId, tempTextureId)
-            GLES30.glDeleteTextures(3, ids, 0)
+        // Destroy ONLY current set
+        if (currentSet.isValid()) {
+            val ids = intArrayOf(currentSet.sharpId, currentSet.blurId)
+            GLES30.glDeleteTextures(2, ids, 0)
+            currentSet.reset()
+        }
+        // Destroy temp if exists
+        if (tempTextureId != 0) {
+            GLES30.glDeleteTextures(1, intArrayOf(tempTextureId), 0)
+            tempTextureId = 0
         }
 
         val sharpBitmap = loadFixedWallpaper()
-        sharpTextureId = uploadTexture(sharpBitmap)
+
+        // Populate Current Set
+        currentSet.sharpId = uploadTexture(sharpBitmap)
         tempTextureId = createEmptyTexture(sharpBitmap.width, sharpBitmap.height)
-        val blurredTextureId: Int
+
         if (blurRadius < 1.0f) {
-            blurredTextureId = uploadTexture(sharpBitmap)
+            currentSet.blurId = uploadTexture(sharpBitmap)
         } else {
-            blurredTextureId = gpuBlur(sharpTextureId, sharpBitmap.width, sharpBitmap.height, blurRadius)
+            currentSet.blurId = gpuBlur(currentSet.sharpId, sharpBitmap.width, sharpBitmap.height, blurRadius)
         }
-        blurTextureId = blurredTextureId
         sharpBitmap.recycle()
     }
+
+    // NEW: Ring Buffer Swapping Logic
+    private fun processPlaylistTransition() {
+        val bitmap = pendingPlaylistBitmap ?: return
+
+        // 1. Clean up the "Next" set if it has garbage (recycle bin)
+        if (nextSet.isValid()) {
+            val ids = intArrayOf(nextSet.sharpId, nextSet.blurId)
+            GLES30.glDeleteTextures(2, ids, 0)
+            nextSet.reset()
+        }
+
+        // 2. Load new wallpaper into "Next" Set
+        nextSet.sharpId = uploadTexture(bitmap)
+
+        // 3. Ensure temp texture matches size (Recreate if size changed)
+        // Note: For simplicity, we recreate temp if we want to be safe, or reuse if size match.
+        // Let's safe-recreate temp to handle different aspect ratios in playlist
+        if (tempTextureId != 0) {
+            GLES30.glDeleteTextures(1, intArrayOf(tempTextureId), 0)
+        }
+        tempTextureId = createEmptyTexture(bitmap.width, bitmap.height)
+
+        // 4. Generate Blur for "Next" Set
+        nextSet.blurId = gpuBlur(nextSet.sharpId, bitmap.width, bitmap.height, 200f)
+
+        bitmap.recycle() // Done with raw bitmap
+
+        // 5. THE SWAP! (Pointer switch)
+        val temp = currentSet
+        currentSet = nextSet
+        nextSet = temp // Old current becomes next (garbage for next cycle)
+
+        // 7. Clear pending flag
+        pendingPlaylistBitmap = null
+    }
+
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES30.glViewport(0, 0, width, height)
@@ -120,23 +178,22 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
     }
 
     override fun onDrawFrame(gl: GL10?) {
-        if (isResetting) {
-            // SAFETY CURTAIN: Clear screen to Black
-            // This ensures the "Ghost" of the old image is wiped from the GPU buffer.
-            GLES30.glClearColor(0f, 0f, 0f, 1f)
-            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
 
-            // Force texture reload for the NEXT frame (when screen turns on)
-            needsReload = true
-
-            // Turn off flag and STOP drawing this frame
-            isResetting = false
-            return
+        // CHECK FOR PLAYLIST SWAP
+        if (pendingPlaylistBitmap != null) {
+            processPlaylistTransition()
         }
 
         if (needsReload) {
             needsReload = false
             loadAndApplyTextures()
+        }
+
+        // SAFETY: If no texture is loaded, skip
+        if (!currentSet.isValid()) {
+            GLES30.glClearColor(0f, 0f, 0f, 1f)
+            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+            return
         }
 
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
@@ -152,12 +209,13 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseScale"), noiseScale)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseStrength"), noiseStrength)
 
+        // BIND CURRENT SET
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, sharpTextureId)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, currentSet.sharpId)
         GLES30.glUniform1i(GLES30.glGetUniformLocation(programId, "uTextureSharp"), 0)
 
         GLES30.glActiveTexture(GLES30.GL_TEXTURE1)
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, blurTextureId)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D,currentSet.blurId )
         GLES30.glUniform1i(GLES30.glGetUniformLocation(programId, "uTextureBlur"), 1)
 
         val aPosLoc = GLES30.glGetAttribLocation(programId, "aPosition")

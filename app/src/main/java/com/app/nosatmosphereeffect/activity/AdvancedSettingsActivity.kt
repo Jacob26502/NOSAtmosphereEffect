@@ -33,7 +33,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val layoutNoise = findViewById<LinearLayout>(R.id.layoutNoiseSettings)
         val inputNoiseScale = findViewById<TextInputEditText>(R.id.inputNoiseScale)
         val inputNoiseStrength = findViewById<TextInputEditText>(R.id.inputNoiseStrength)
-        val btnRotationInterval = findViewById<View>(R.id.btnRotationInterval)
         val activeEffect = intent.getStringExtra("ACTIVE_EFFECT_TYPE") ?: "ORIGINAL"
         val isSamsung = intent.getBooleanExtra("IS_SAMSUNG", false)
         val defaultDuration = if (activeEffect == "REVERSE") 1500L else if (activeEffect == "ORIGINAL") 2500L else 500L

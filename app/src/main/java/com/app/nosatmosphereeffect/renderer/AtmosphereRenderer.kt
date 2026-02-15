@@ -22,6 +22,20 @@ import kotlin.math.pow
 
 class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
+    // --- RING BUFFER LOGIC ---
+    private class TextureSet {
+        var sharpId = 0
+        var blurId = 0
+        fun isValid() = sharpId != 0 && blurId != 0
+        fun reset() { sharpId = 0; blurId = 0 }
+    }
+
+    private var currentSet = TextureSet()
+    private var nextSet = TextureSet() // The "Back Buffer"
+
+    @Volatile private var pendingPlaylistBitmap: Bitmap? = null
+    // -------------------------
+
     var blurStrength: Float = 0.0f
         set(value) {
             if (value == 0.0f && field != 0.0f) {
@@ -31,15 +45,12 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         }
     @Volatile var dimLevel: Float = 0.2f
     @Volatile private var needsReload: Boolean = false
-    @Volatile private var isResetting = false
     @Volatile var enableNoise: Boolean = false
     @Volatile var noiseScale: Float = 2000.0f
     @Volatile var noiseStrength: Float = 0.06f
 
     private var programId: Int = 0
     private var blurProgramId: Int = 0
-    private var sharpTextureId: Int = 0
-    private var blurTextureId: Int = 0
     private var tempTextureId: Int = 0
     private var fboId: Int = 0
     private var aspectRatio: Float = 1.0f
@@ -62,10 +73,6 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     private val blobPosBuffer = FloatArray(MAX_BLOBS * 2)
     private val blobSizesBuffer = FloatArray(MAX_BLOBS)
 
-    fun resetAndClear() {
-        isResetting = true
-    }
-
     private val vertices = floatArrayOf(
         -1f, -1f,  0f, 1f,
         1f, -1f,  1f, 1f,
@@ -76,6 +83,9 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
     fun reloadTexture() {
         needsReload = true
+    }
+    fun queuePlaylistTransition(bitmap: Bitmap) {
+        pendingPlaylistBitmap = bitmap
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
@@ -120,22 +130,73 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
     }
 
     private fun loadAndApplyTextures() {
-        if (sharpTextureId != 0) {
-            val ids = intArrayOf(sharpTextureId, blurTextureId, tempTextureId)
-            GLES30.glDeleteTextures(3, ids, 0)
+        // Destroy ONLY current set
+        if (currentSet.isValid()) {
+            val ids = intArrayOf(currentSet.sharpId, currentSet.blurId)
+            GLES30.glDeleteTextures(2, ids, 0)
+            currentSet.reset()
+        }
+        // Destroy temp if exists
+        if (tempTextureId != 0) {
+            GLES30.glDeleteTextures(1, intArrayOf(tempTextureId), 0)
+            tempTextureId = 0
         }
 
         val sharpBitmap = loadFixedWallpaper()
-        sharpTextureId = uploadTexture(sharpBitmap)
-        tempTextureId = createEmptyTexture(sharpBitmap.width, sharpBitmap.height)
-        val blurredTextureId = gpuBlur(sharpTextureId, sharpBitmap.width, sharpBitmap.height, 200f)
-        val blurredBitmap = downloadTexture(blurredTextureId, sharpBitmap.width, sharpBitmap.height)
 
+        // Populate Current Set
+        currentSet.sharpId = uploadTexture(sharpBitmap)
+        tempTextureId = createEmptyTexture(sharpBitmap.width, sharpBitmap.height)
+        currentSet.blurId = gpuBlur(currentSet.sharpId, sharpBitmap.width, sharpBitmap.height, 200f)
+
+        val blurredBitmap = downloadTexture(currentSet.blurId, sharpBitmap.width, sharpBitmap.height)
         initBaseBlobs(blurredBitmap)
 
-        blurTextureId = blurredTextureId
         sharpBitmap.recycle()
         blurredBitmap.recycle()
+    }
+
+    // NEW: Ring Buffer Swapping Logic
+    private fun processPlaylistTransition() {
+        val bitmap = pendingPlaylistBitmap ?: return
+
+        // 1. Clean up the "Next" set if it has garbage (recycle bin)
+        if (nextSet.isValid()) {
+            val ids = intArrayOf(nextSet.sharpId, nextSet.blurId)
+            GLES30.glDeleteTextures(2, ids, 0)
+            nextSet.reset()
+        }
+
+        // 2. Load new wallpaper into "Next" Set
+        nextSet.sharpId = uploadTexture(bitmap)
+
+        // 3. Ensure temp texture matches size (Recreate if size changed)
+        // Note: For simplicity, we recreate temp if we want to be safe, or reuse if size match.
+        // Let's safe-recreate temp to handle different aspect ratios in playlist
+        if (tempTextureId != 0) {
+            GLES30.glDeleteTextures(1, intArrayOf(tempTextureId), 0)
+        }
+        tempTextureId = createEmptyTexture(bitmap.width, bitmap.height)
+
+        // 4. Generate Blur for "Next" Set
+        nextSet.blurId = gpuBlur(nextSet.sharpId, bitmap.width, bitmap.height, 200f)
+
+        // 5. Calculate Physics/Blobs for new wallpaper
+        val blurredBitmap = downloadTexture(nextSet.blurId, bitmap.width, bitmap.height)
+        initBaseBlobs(blurredBitmap)
+        blurredBitmap.recycle()
+        bitmap.recycle() // Done with raw bitmap
+
+        // 6. THE SWAP! (Pointer switch)
+        val temp = currentSet
+        currentSet = nextSet
+        nextSet = temp // Old current becomes next (garbage for next cycle)
+
+        // 7. Clear pending flag
+        pendingPlaylistBitmap = null
+
+        // 8. Trigger reroll of targets for smooth transition
+        reRollTargets()
     }
 
     private fun initBaseBlobs(blurred: Bitmap) {
@@ -225,26 +286,21 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
     override fun onDrawFrame(gl: GL10?) {
 
-        if (isResetting) {
-            // SAFETY CURTAIN: Clear screen to Black
-            // This ensures the "Ghost" of the old image is wiped from the GPU buffer.
-            GLES30.glClearColor(0f, 0f, 0f, 1f)
-            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
-
-            // Reset Logic State
-            blurStrength = 0.0f
-
-            // Force texture reload for the NEXT frame (when screen turns on)
-            needsReload = true
-
-            // Turn off flag and STOP drawing this frame
-            isResetting = false
-            return
+        // CHECK FOR PLAYLIST SWAP
+        if (pendingPlaylistBitmap != null) {
+            processPlaylistTransition()
         }
 
         if (needsReload) {
             needsReload = false
             loadAndApplyTextures()
+        }
+
+        // SAFETY: If no texture is loaded, skip
+        if (!currentSet.isValid()) {
+            GLES30.glClearColor(0f, 0f, 0f, 1f)
+            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+            return
         }
 
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
@@ -254,35 +310,26 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
 
         val physicsRaw = (t - 0.1f) / 0.9f
         val physicsT = physicsRaw.coerceIn(0f, 1f)
-
-        // MOVEMENT CURVE: Fast Start, Slow Settle
         val progress = 1.0f - (1.0f - physicsT).pow(3)
 
         var idx = 0
 
         for (b in blobs) {
             if (idx >= MAX_BLOBS) break
-
-            // Cubic Bezier Movement
             val u = 1.0f - progress
             val tt = progress * progress
             val uu = u * u
             val ut2 = 2 * u * progress
-
             val bx = (uu * b.startX) + (ut2 * b.p1x) + (tt * b.endX)
             val by = (uu * b.startY) + (ut2 * b.p1y) + (tt * b.endY)
-
-            // Clean movement, no wobble
             val bSize = b.startSize + (b.endSize - b.startSize) * progress
 
             blobPosBuffer[idx * 2] = bx
             blobPosBuffer[idx * 2 + 1] = by
             blobSizesBuffer[idx] = bSize
-
             blobColorsBuffer[idx * 3] = b.color[0]
             blobColorsBuffer[idx * 3 + 1] = b.color[1]
             blobColorsBuffer[idx * 3 + 2] = b.color[2]
-
             idx++
         }
 
@@ -300,12 +347,13 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseScale"), noiseScale)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseStrength"), noiseStrength)
 
+        // BIND CURRENT SET
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, sharpTextureId)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, currentSet.sharpId)
         GLES30.glUniform1i(GLES30.glGetUniformLocation(programId, "uTextureSharp"), 0)
 
         GLES30.glActiveTexture(GLES30.GL_TEXTURE1)
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, blurTextureId)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, currentSet.blurId)
         GLES30.glUniform1i(GLES30.glGetUniformLocation(programId, "uTextureBlur"), 1)
 
         val aPosLoc = GLES30.glGetAttribLocation(programId, "aPosition")
@@ -407,11 +455,8 @@ class AtmosphereRenderer(private val context: Context) : GLSurfaceView.Renderer 
         val file = File(context.filesDir, "wallpaper.jpg")
         if (file.exists()) {
             val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-            if (bitmap != null) {
-                return bitmap
-            }
+            if (bitmap != null) return bitmap
         }
-
         val fallback = createBitmap(1080, 1920)
         fallback.eraseColor(Color.BLUE)
         return fallback
