@@ -1,34 +1,54 @@
 name: Telegram Notification
 
-# Trigger this workflow only when a Release is published
+# Trigger this workflow when 'Android Release' completes
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Android Release"]
+    branches: [master]
+    types:
+      - completed
 
 jobs:
   notify:
     runs-on: ubuntu-latest
+    # Only run if the build was successful
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # We wait briefly to ensure the previous workflow has fully finished uploading assets
-      - name: Wait for Assets
-        run: sleep 15
+      - name: Get Release Details
+        id: get_info
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 1. Fetch details of the LATEST release (which was just created)
+          gh release view --json tagName,url > release_info.json
+          
+          # 2. Parse the Tag and URL using jq (installed by default on ubuntu)
+          TAG=$(jq -r .tagName release_info.json)
+          URL=$(jq -r .url release_info.json)
+          
+          echo "Found latest release: $TAG"
+          
+          # 3. Save to Environment Variables for the next steps
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "URL=$URL" >> $GITHUB_ENV
 
       - name: Download Release Assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Downloads all assets from the release that triggered this workflow
-          gh release download ${{ github.event.release.tag_name }} --dir ./release_assets
+          # Download assets specifically for the tag we just found
+          gh release download ${{ env.TAG }} --dir ./release_assets
 
       - name: Upload to Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          TAG: ${{ github.event.release.tag_name }}
-          URL: ${{ github.event.release.html_url }}
+          # Use the Env vars we set in the "Get Release Details" step
+          TAG: ${{ env.TAG }}
+          URL: ${{ env.URL }}
         run: |
           cd release_assets
           
