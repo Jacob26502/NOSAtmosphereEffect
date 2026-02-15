@@ -1,4 +1,4 @@
-name: Telegram Notification
+name: Telegram Notification (DEBUG MODE)
 
 on:
   workflow_run:
@@ -8,69 +8,71 @@ on:
       - completed
 
 jobs:
-  notify:
+  debug_notify:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Get Release Details
+      - name: 1. Get Release Tag
         id: get_info
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Fetch tag of the LATEST release
+          echo "--- 🔍 FETCHING TAG ---"
           gh release view --json tagName > release_info.json
           TAG=$(jq -r .tagName release_info.json)
-          
-          echo "Found latest release: $TAG"
+          echo "Found Tag: $TAG"
           echo "TAG=$TAG" >> $GITHUB_ENV
 
-      - name: Download Release Assets
+      - name: 2. Download & Verify Assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          echo "--- 📥 DOWNLOADING ASSETS ---"
           gh release download ${{ env.TAG }} --dir ./release_assets
+          
+          echo "--- 📂 DIRECTORY CONTENTS ---"
+          ls -lh ./release_assets/
 
-      - name: Upload to Telegram
+      - name: 3. Attempt Upload with Logging
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TAG: ${{ env.TAG }}
-          REPO: ${{ github.repository }}
         run: |
-          # 1. Construct Direct Download Links
-          # GitHub release assets follow this standard URL pattern
-          LINK_16="https://github.com/$REPO/releases/download/$TAG/app-release-android-16+.apk"
-          LINK_13="https://github.com/$REPO/releases/download/$TAG/app-release-android-13+.apk"
-
-          # 2. Define the Simplified Caption (HTML format)
-          CAPTION="🚀 <b>New release: $TAG</b>
-
-          <b>Links of the APKs:</b>
-          • <a href=\"$LINK_16\">Android 16+ Link</a>
-          • <a href=\"$LINK_13\">Android 13+ Link</a>"
-
-          # 3. Upload Function
-          upload_telegram() {
+          # Debug Function
+          debug_upload() {
             FILE_NAME="$1"
             FILE_PATH="./release_assets/$FILE_NAME"
           
-            if [ -f "$FILE_PATH" ]; then
-              echo "🚀 Uploading $FILE_NAME..."
-          
-              # Send file with the simplified caption
-              curl -s -F "chat_id=$CHAT_ID" \
-                   -F document=@"$FILE_PATH" \
-                   -F parse_mode=HTML \
-                   -F caption="$CAPTION" \
-                   https://api.telegram.org/bot$BOT_TOKEN/sendDocument
-            else
-              echo "⚠️ File $FILE_PATH not found."
+            echo "========================================================"
+            echo "🚀 STARTING UPLOAD: $FILE_NAME"
+
+            if [ ! -f "$FILE_PATH" ]; then
+              echo "❌ CRITICAL ERROR: File not found at $FILE_PATH"
+              return
             fi
+
+            # Simple caption to avoid formatting errors during debug
+            CAPTION="Debug Upload: $FILE_NAME (Tag: $TAG)"
+
+            # Run CURL and capture the output to a file (response.json)
+            # -v: Verbose (shows connection details)
+            HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
+              -F "chat_id=$CHAT_ID" \
+              -F "document=@$FILE_PATH" \
+              -F "caption=$CAPTION" \
+              https://api.telegram.org/bot$BOT_TOKEN/sendDocument)
+
+            echo "📡 HTTP Status Code: $HTTP_STATUS"
+            echo "📄 Raw Telegram Response:"
+            cat response.json
+            echo ""
+            echo "========================================================"
           }
 
-          # 4. Trigger Uploads
-          upload_telegram "app-release-android-16+.apk"
-          upload_telegram "app-release-android-13+.apk"
+          # Try to upload both files
+          debug_upload "app-release-android-16+.apk"
+          debug_upload "app-release-android-13+.apk"
