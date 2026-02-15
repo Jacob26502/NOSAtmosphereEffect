@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.slider.Slider
+import com.google.android.material.materialswitch.MaterialSwitch
 import androidx.core.content.edit
 import com.app.nosatmosphereeffect.activity.AdvancedSettingsActivity
 import com.app.nosatmosphereeffect.activity.EffectSelectionActivity
@@ -23,6 +24,7 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
 
     private lateinit var layoutSettings: LinearLayout
+    private lateinit var layoutColors: LinearLayout
     private lateinit var sliderDimness: Slider
 
     private lateinit var btnUpdateDimness: Button
@@ -32,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sliderBlurStrength: Slider
     private lateinit var btnUpdateBlur: Button
     private lateinit var btnRotationInterval: Button
+    private lateinit var switchColors: MaterialSwitch
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +44,7 @@ class MainActivity : AppCompatActivity() {
         initializeSmartDefaults()
 
         layoutSettings = findViewById(R.id.layoutSettings)
+        layoutColors = findViewById(R.id.layoutColors)
         sliderDimness = findViewById(R.id.sliderDimness)
         btnUpdateDimness = findViewById(R.id.btnUpdateDimness)
         btnMainAction = findViewById(R.id.btnMainAction)
@@ -49,6 +53,7 @@ class MainActivity : AppCompatActivity() {
         sliderBlurStrength = findViewById(R.id.sliderBlurStrength)
         btnUpdateBlur = findViewById(R.id.btnUpdateBlur)
         btnRotationInterval = findViewById(R.id.btnRotationInterval)
+        switchColors = findViewById(R.id.switchNotifyColors)
 
         btnMainAction.setOnClickListener {
             startActivity(Intent(this, EffectSelectionActivity::class.java))
@@ -79,6 +84,15 @@ class MainActivity : AppCompatActivity() {
 
         btnRotationInterval.setOnClickListener {
             showRotationIntervalDialog()
+        }
+
+        switchColors.setOnCheckedChangeListener { _, isChecked ->
+            getSharedPreferences("app_prefs", MODE_PRIVATE).edit {
+                putBoolean("notify_system_colors", isChecked)
+            }
+            val intent = Intent("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+            intent.setPackage(packageName)
+            sendBroadcast(intent)
         }
     }
 
@@ -116,29 +130,74 @@ class MainActivity : AppCompatActivity() {
             btnMainAction.setText(R.string.action_change_effect)
             layoutSettings.visibility = View.VISIBLE
             loadCurrentDimness()
+            layoutColors.visibility = View.VISIBLE
+
             if (activeEffect.contains("FROSTED")) {
                 cardBlurSettings.visibility = View.VISIBLE
                 loadCurrentBlur()
             } else {
                 cardBlurSettings.visibility = View.GONE
             }
+
+            // 1. Determine Current Mode
             val playlistDir = File(filesDir, "playlist")
+            var isPlaylistMode = false
             if (playlistDir.exists() && playlistDir.isDirectory) {
                 val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
                 if (!files.isNullOrEmpty() && files.size > 1) {
-                    btnRotationInterval.visibility = View.VISIBLE
-                }else{
-                    btnRotationInterval.visibility = View.GONE
+                    isPlaylistMode = true
                 }
-
-            }else{
-                btnRotationInterval.visibility = View.GONE
             }
+
+            // 2. DETECT MODE CHANGE & FORCE DEFAULTS
+            // This fixes the "Stored Value is True but Switch is Off" bug.
+            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+            val lastMode = prefs.getString("last_known_wallpaper_mode", "UNKNOWN")
+            val currentMode = if (isPlaylistMode) "PLAYLIST" else "SINGLE"
+
+            if (lastMode != currentMode) {
+                // Mode has changed! Force safe defaults.
+                if (isPlaylistMode) {
+                    // Moving to Playlist -> Force OFF (Performance)
+                    prefs.edit().putBoolean("notify_system_colors", false).apply()
+                    // Optional: Broadcast this change immediately so Service knows
+                    sendConfigUpdate()
+                } else {
+                    // Moving to Single -> Force ON (Safe)
+                    prefs.edit().putBoolean("notify_system_colors", true).apply()
+                    sendConfigUpdate()
+                }
+                // Save new mode
+                prefs.edit().putString("last_known_wallpaper_mode", currentMode).apply()
+            }
+
+            // 3. UI Updates
+            btnRotationInterval.visibility = if (isPlaylistMode) View.VISIBLE else View.GONE
+
+            // 4. Sync Switch UI
+            switchColors.setOnCheckedChangeListener(null)
+            // Now safe to read because we auto-corrected above if needed
+            val shouldNotify = prefs.getBoolean("notify_system_colors", !isPlaylistMode)
+            switchColors.isChecked = shouldNotify
+
+            switchColors.setOnCheckedChangeListener { _, isChecked ->
+                getSharedPreferences("app_prefs", MODE_PRIVATE).edit {
+                    putBoolean("notify_system_colors", isChecked)
+                }
+                sendConfigUpdate()
+            }
+
         } else {
             btnMainAction.setText(R.string.action_select_effect)
             layoutSettings.visibility = View.GONE
             btnRotationInterval.visibility = View.GONE
+            layoutColors.visibility = View.GONE
         }
+    }
+    private fun sendConfigUpdate() {
+        val intent = Intent("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+        intent.setPackage(packageName)
+        sendBroadcast(intent)
     }
     private fun updateButtonState(sliderValue: Float) {
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
@@ -213,8 +272,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showRotationIntervalDialog() {
-        val intervals = arrayOf("Every Lock (Instant)", "15 Minutes", "30 Minutes", "1 Hour", "3 Hours", "6 Hours", "12 Hours", "24 Hours")
-        val values = longArrayOf(0, 15, 30, 60, 180, 360, 720, 1440)
+        val intervals = arrayOf("Every Lock (Instant)", "1 Minute", "15 Minutes", "30 Minutes", "1 Hour", "3 Hours", "6 Hours", "12 Hours", "24 Hours")
+        val values = longArrayOf(0, 1, 15, 30, 60, 180, 360, 720, 1440)
 
         // Get current setting to show selection (Optional)
         val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)

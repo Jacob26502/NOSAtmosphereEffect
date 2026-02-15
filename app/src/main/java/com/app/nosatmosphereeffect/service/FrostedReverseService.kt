@@ -33,57 +33,70 @@ class FrostedReverseService : GLWallpaperService() {
         private var myRenderer: FrostedRenderer? = null
         private var blurAnimator: ValueAnimator? = null
         private var isLocked: Boolean = true
+        private var enableSystemColorUpdate: Boolean = false
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
         private val resetRunnable = Runnable {
             prepareForNextUnlock()
-            rotateWallpaper()
         }
 
         private fun rotateWallpaper() {
-            val playlistDir = File(filesDir, "playlist")
-            val playlistFiles = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+            // Run all I/O on background thread
+            Thread {
+                val playlistDir = File(filesDir, "playlist")
+                val playlistFiles = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
 
-            if (playlistFiles == null || playlistFiles.size <= 1) {
-                return
-            }
-
-            val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
-            val intervalMinutes = prefs.getLong("rotation_interval_minutes", 0) // Default 0 (Instant)
-            val lastRotationTime = prefs.getLong("last_rotation_timestamp", 0)
-            val currentTime = System.currentTimeMillis()
-            val diffMinutes = (currentTime - lastRotationTime) / 60000
-
-            // If interval set (>0) AND not enough time passed, SKIP rotation
-            if (intervalMinutes > 0 && diffMinutes < intervalMinutes) {
-                return
-            }
-
-            val nextFile = File(filesDir, "next_wallpaper.jpg")
-            val activeFile = File(filesDir, "wallpaper.jpg")
-
-            if (nextFile.exists()) {
-                try {
-                    if (activeFile.exists()) {
-                        activeFile.delete()
-                    }
-                    val success = nextFile.renameTo(activeFile)
-
-                    if (success) {
-                        prefs.edit().putLong("last_rotation_timestamp", currentTime).apply()
-                        handler.post {
-                            myRenderer?.resetAndClear(1.0f)
-                            requestRender()
-                            notifyColorsChanged()
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                if (playlistFiles == null || playlistFiles.size <= 1) {
+                    return@Thread
                 }
-                prepareNextWallpaper()
-            } else {
-                prepareNextWallpaper()
-            }
+
+                val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+                val intervalMinutes = prefs.getLong("rotation_interval_minutes", 0)
+                val lastRotationTime = prefs.getLong("last_rotation_timestamp", 0)
+                val currentTime = System.currentTimeMillis()
+                val diffMinutes = (currentTime - lastRotationTime) / 60000
+
+                if (intervalMinutes > 0 && diffMinutes < intervalMinutes) {
+                    return@Thread
+                }
+
+                val nextFile = File(filesDir, "next_wallpaper.jpg")
+                val activeFile = File(filesDir, "wallpaper.jpg")
+
+                if (nextFile.exists()) {
+                    try {
+                        // --- RING BUFFER LOGIC START ---
+                        // We decode the NEW image first, without touching the ACTIVE file yet.
+                        val nextBitmap = BitmapFactory.decodeFile(nextFile.absolutePath)
+
+                        if (nextBitmap != null) {
+                            // Send to renderer (Thread Safe)
+                            myRenderer?.queuePlaylistTransition(nextBitmap,1.0f)
+                            requestRender() // Force a frame to process the swap
+
+                            // Now update disk for persistence (Persistence ONLY)
+                            // We do NOT call resetAndClear(). The renderer handles the swap.
+                            if (activeFile.exists()) {
+                                activeFile.delete()
+                            }
+                            nextFile.renameTo(activeFile)
+
+                            // Save timestamp
+                            prefs.edit().putLong("last_rotation_timestamp", currentTime).apply()
+                            if (enableSystemColorUpdate) {
+                                notifyColorsChanged()
+                            }
+                        }
+                        // --- RING BUFFER LOGIC END ---
+
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    prepareNextWallpaper()
+                } else {
+                    prepareNextWallpaper()
+                }
+            }.start()
         }
 
         private fun prepareNextWallpaper() {
@@ -160,6 +173,7 @@ class FrostedReverseService : GLWallpaperService() {
                         handler.removeCallbacks(unlockChecker)
                         isLocked = true
                         handler.postDelayed(resetRunnable, lockDelay)
+                        rotateWallpaper()
                     }
                     Intent.ACTION_USER_PRESENT -> {
                         handler.removeCallbacks(resetRunnable)
@@ -172,11 +186,15 @@ class FrostedReverseService : GLWallpaperService() {
                     "com.app.nosatmosphereeffect.RELOAD_WALLPAPER" -> {
                         myRenderer?.reloadTexture()
                         requestRender()
-                        notifyColorsChanged()
+                        if (enableSystemColorUpdate) {
+                            notifyColorsChanged()
+                        }
                     }
                     "com.app.nosatmosphereeffect.UPDATE_CONFIG" -> {
                         updateRendererConfig()
-                        requestRender()
+                        if (enableSystemColorUpdate) {
+                            notifyColorsChanged()
+                        }
                     }
                 }
             }
@@ -263,6 +281,8 @@ class FrostedReverseService : GLWallpaperService() {
                 myRenderer?.blurRadius = savedRadius
                 myRenderer?.reloadTexture()
             }
+
+            enableSystemColorUpdate = prefs.getBoolean("notify_system_colors", false)
 
             val isSamsung = Build.MANUFACTURER.equals("samsung", ignoreCase = true)
             pollInterval = prefs.getLong("poll_interval", if (isSamsung) 30000L else 50L)
