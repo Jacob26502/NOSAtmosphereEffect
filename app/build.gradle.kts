@@ -9,8 +9,8 @@ android {
 
     defaultConfig {
         applicationId = "com.saad_khan_rind.atmosphere_effect"
-        versionName = "5.0.2"
-        versionCode = 100034
+        versionName = "5.0.3"
+        versionCode = 100035
     }
 
     flavorDimensions += "apiLevel"
@@ -21,14 +21,14 @@ android {
             dimension = "apiLevel"
             minSdk = 36
             targetSdk = 36
-            versionCode = 200034
+            versionCode = 200035
         }
 
         create("v33") {
             dimension = "apiLevel"
             minSdk = 33
             targetSdk = 33
-            versionCode = 100034
+            versionCode = 100035
         }
 
     }

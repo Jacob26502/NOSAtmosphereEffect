@@ -1,0 +1,78 @@
+name: Android Release & Telegram Upload
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
+
+      # This builds both the 'standard' (A13+) and 'preview' (A16+) flavors
+      - name: Build Release APKs
+        run: ./gradlew assembleRelease
+
+      # Sign the APKs using your GitHub Secrets
+      - name: Sign Release APKs
+        id: sign_app
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+
+      # Proactive Telegram Upload
+      - name: Upload Both APKs to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Find all signed APKs in the build output
+          find app/build/outputs/apk -name "*-signed.apk" | while read apk; do
+          
+            FILENAME=$(basename "$apk")
+          
+            # Identify which flavor is being uploaded
+            if [[ "$FILENAME" == *"preview"* ]]; then
+               VERSION_LABEL="🌟 Android 16+ (Preview Version)"
+            else
+               VERSION_LABEL="📱 Android 13+ (Standard Version)"
+            fi
+
+            echo "Uploading $FILENAME to Telegram..."
+
+            # Construct the message caption
+            CAPTION="🚀 *New Release: Atmosphere Effect*
+          
+            🏷 *Tag:* ${{ github.event.release.tag_name }}
+            📂 *Build:* $VERSION_LABEL
+          
+            📝 *Notes:*
+            ${{ github.event.release.body }}
+          
+            🔗 [View on GitHub](${{ github.event.release.html_url }})"
+
+            # Send file to Telegram via API
+            curl -v -F "chat_id=$CHAT_ID" \
+            -F document=@"$apk" \
+            -F parse_mode=Markdown \
+            -F caption="$CAPTION" \
+            https://api.telegram.org/bot$BOT_TOKEN/sendDocument
+          done
