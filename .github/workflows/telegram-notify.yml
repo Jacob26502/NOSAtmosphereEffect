@@ -1,6 +1,5 @@
 name: Telegram Notification
 
-# Trigger this workflow when 'Android Release' completes
 on:
   workflow_run:
     workflows: ["Android Release"]
@@ -11,7 +10,6 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    # Only run if the build was successful
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout Code
@@ -22,62 +20,57 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # 1. Fetch details of the LATEST release (which was just created)
-          gh release view --json tagName,url > release_info.json
-          
-          # 2. Parse the Tag and URL using jq (installed by default on ubuntu)
+          # Fetch tag of the LATEST release
+          gh release view --json tagName > release_info.json
           TAG=$(jq -r .tagName release_info.json)
-          URL=$(jq -r .url release_info.json)
           
           echo "Found latest release: $TAG"
-          
-          # 3. Save to Environment Variables for the next steps
           echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "URL=$URL" >> $GITHUB_ENV
 
       - name: Download Release Assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Download assets specifically for the tag we just found
           gh release download ${{ env.TAG }} --dir ./release_assets
 
       - name: Upload to Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Use the Env vars we set in the "Get Release Details" step
           TAG: ${{ env.TAG }}
-          URL: ${{ env.URL }}
+          REPO: ${{ github.repository }}
         run: |
-          cd release_assets
-          
-          # Define the reusable upload function
+          # 1. Construct Direct Download Links
+          # GitHub release assets follow this standard URL pattern
+          LINK_16="https://github.com/$REPO/releases/download/$TAG/app-release-android-16+.apk"
+          LINK_13="https://github.com/$REPO/releases/download/$TAG/app-release-android-13+.apk"
+
+          # 2. Define the Simplified Caption (HTML format)
+          CAPTION="🚀 <b>New release: $TAG</b>
+
+          <b>Links of the APKs:</b>
+          • <a href=\"$LINK_16\">Android 16+ Link</a>
+          • <a href=\"$LINK_13\">Android 13+ Link</a>"
+
+          # 3. Upload Function
           upload_telegram() {
             FILE_NAME="$1"
-            BUILD_LABEL="$2"
+            FILE_PATH="./release_assets/$FILE_NAME"
           
-            if [ -f "$FILE_NAME" ]; then
-              echo "✅ Found $FILE_NAME, uploading..."
+            if [ -f "$FILE_PATH" ]; then
+              echo "🚀 Uploading $FILE_NAME..."
           
-              CAPTION="🚀 *New Release: Atmosphere Effect*
-
-              🏷 *Tag:* $TAG
-              📂 *Build:* $BUILD_LABEL
-
-              🔗 [View on GitHub]($URL)"
-          
-              # Send to Telegram
+              # Send file with the simplified caption
               curl -s -F "chat_id=$CHAT_ID" \
-                   -F document=@"$FILE_NAME" \
-                   -F parse_mode=Markdown \
+                   -F document=@"$FILE_PATH" \
+                   -F parse_mode=HTML \
                    -F caption="$CAPTION" \
                    https://api.telegram.org/bot$BOT_TOKEN/sendDocument
             else
-              echo "⚠️ File $FILE_NAME not found in release assets."
+              echo "⚠️ File $FILE_PATH not found."
             fi
           }
 
-          # Trigger uploads
-          upload_telegram "app-release-android-16+.apk" "🌟 Android 16+ (Preview Version)"
-          upload_telegram "app-release-android-13+.apk" "📱 Android 13+ (Standard Version)"
+          # 4. Trigger Uploads
+          upload_telegram "app-release-android-16+.apk"
+          upload_telegram "app-release-android-13+.apk"
