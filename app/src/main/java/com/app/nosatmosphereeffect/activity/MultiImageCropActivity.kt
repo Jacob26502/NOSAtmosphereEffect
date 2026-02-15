@@ -51,13 +51,9 @@ class MultiImageCropActivity : AppCompatActivity() {
 
         btnDone.setOnClickListener {
             val croppedBitmap = cropView.getCroppedBitmap()
-            if (croppedBitmap != null) {
                 // Get the current zoom state to save it
                 val currentMatrix = cropView.getCurrentMatrixValues()
                 saveAndReturnResult(croppedBitmap, currentMatrix)
-            } else {
-                Toast.makeText(this, "Error cropping image", Toast.LENGTH_SHORT).show()
-            }
         }
     }
 
