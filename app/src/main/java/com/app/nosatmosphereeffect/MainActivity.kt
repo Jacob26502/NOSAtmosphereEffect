@@ -272,7 +272,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showRotationIntervalDialog() {
-        val intervals = arrayOf("Every Lock (Instant)", "1 Minutes", "15 Minutes", "30 Minutes", "1 Hour", "3 Hours", "6 Hours", "12 Hours", "24 Hours")
+        val intervals = arrayOf("Every Lock (Instant)", "1 Minute", "15 Minutes", "30 Minutes", "1 Hour", "3 Hours", "6 Hours", "12 Hours", "24 Hours")
         val values = longArrayOf(0, 1, 15, 30, 60, 180, 360, 720, 1440)
 
         // Get current setting to show selection (Optional)
