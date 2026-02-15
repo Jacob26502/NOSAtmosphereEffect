@@ -1,4 +1,4 @@
-name: Telegram Notification (DEBUG MODE)
+name: Telegram Notification
 
 on:
   workflow_run:
@@ -8,71 +8,45 @@ on:
       - completed
 
 jobs:
-  debug_notify:
+  notify:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: 1. Get Release Tag
-        id: get_info
+      - name: Get Release Details
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "--- 🔍 FETCHING TAG ---"
+          # Fetch the tag of the newly created release
           gh release view --json tagName > release_info.json
           TAG=$(jq -r .tagName release_info.json)
-          echo "Found Tag: $TAG"
           echo "TAG=$TAG" >> $GITHUB_ENV
 
-      - name: 2. Download & Verify Assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "--- 📥 DOWNLOADING ASSETS ---"
-          gh release download ${{ env.TAG }} --dir ./release_assets
-          
-          echo "--- 📂 DIRECTORY CONTENTS ---"
-          ls -lh ./release_assets/
-
-      - name: 3. Attempt Upload with Logging
+      - name: Send Download Links
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TAG: ${{ env.TAG }}
+          REPO: ${{ github.repository }}
         run: |
-          # Debug Function
-          debug_upload() {
-            FILE_NAME="$1"
-            FILE_PATH="./release_assets/$FILE_NAME"
-          
-            echo "========================================================"
-            echo "🚀 STARTING UPLOAD: $FILE_NAME"
+          # 1. Construct Direct Download Links
+          # These links trigger an immediate download when clicked
+          LINK_16="https://github.com/$REPO/releases/download/$TAG/app-release-android-16+.apk"
+          LINK_13="https://github.com/$REPO/releases/download/$TAG/app-release-android-13+.apk"
 
-            if [ ! -f "$FILE_PATH" ]; then
-              echo "❌ CRITICAL ERROR: File not found at $FILE_PATH"
-              return
-            fi
+          # 2. Construct the Message (HTML)
+          MESSAGE="🚀 <b>New Release: $TAG</b>
 
-            # Simple caption to avoid formatting errors during debug
-            CAPTION="Debug Upload: $FILE_NAME (Tag: $TAG)"
+          ⬇️ <b>Click to Download:</b>
+          • <a href=\"$LINK_16\">Android 16+</a>
+          • <a href=\"$LINK_13\">Android 13+</a>"
 
-            # Run CURL and capture the output to a file (response.json)
-            # -v: Verbose (shows connection details)
-            HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
-              -F "chat_id=$CHAT_ID" \
-              -F "document=@$FILE_PATH" \
-              -F "caption=$CAPTION" \
-              https://api.telegram.org/bot$BOT_TOKEN/sendDocument)
-
-            echo "📡 HTTP Status Code: $HTTP_STATUS"
-            echo "📄 Raw Telegram Response:"
-            cat response.json
-            echo ""
-            echo "========================================================"
-          }
-
-          # Try to upload both files
-          debug_upload "app-release-android-16+.apk"
-          debug_upload "app-release-android-13+.apk"
+          # 3. Send to Telegram
+          # We use --data-urlencode to safely handle newlines and special characters
+          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+               -d chat_id="$CHAT_ID" \
+               -d parse_mode="HTML" \
+               -d disable_web_page_preview="true" \
+               --data-urlencode "text=$MESSAGE"
