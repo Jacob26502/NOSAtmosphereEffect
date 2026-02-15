@@ -100,37 +100,43 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VER: ${{ env.VERSION_NAME }}
+          REPO: ${{ github.repository }}
         run: |
-          # Look for the renamed APKs in the current directory (.)
-          # We use maxdepth 1 to avoid looking inside subdirectories
-          find . -maxdepth 1 -name "app-release-android-*.apk" | while read apk; do
-
-            FILENAME=$(basename "$apk")
-
-            # Identify which flavor is being uploaded based on your new naming convention
-            if [[ "$FILENAME" == *"16+"* ]]; then
-               VERSION_LABEL="🌟 Android 16+ (Preview Version)"
-            else
-               VERSION_LABEL="📱 Android 13+ (Standard Version)"
-            fi
-
-            echo "Uploading $FILENAME to Telegram..."
-
-            # Construct the message caption
-            CAPTION="🚀 *New Release: Atmosphere Effect*
-
-            🏷 *Tag:* ${{ github.event.release.tag_name }}
-            📂 *Build:* $VERSION_LABEL
-
-            📝 *Notes:*
-            ${{ github.event.release.body }}
-
-            🔗 [View on GitHub](${{ github.event.release.html_url }})"
-
-            # Send file to Telegram via API
-            curl -v -F "chat_id=$CHAT_ID" \
-            -F document=@"$apk" \
-            -F parse_mode=Markdown \
-            -F caption="$CAPTION" \
-            https://api.telegram.org/bot$BOT_TOKEN/sendDocument
-          done
+            # 1. Construct the Release URL manually
+            RELEASE_URL="https://github.com/$REPO/releases/tag/v$VER"
+            
+            # 2. Define a reusable upload function
+            upload_telegram() {
+              FILE_PATH="$1"
+              BUILD_LABEL="$2"
+            
+              if [ ! -f "$FILE_PATH" ]; then
+                echo "❌ Error: File $FILE_PATH not found!"
+                return
+              fi
+            
+              echo "Uploading $FILE_PATH..."
+            
+              # Construct Caption
+              # Note: We removed 'release.body' because it is not available in 'push' events
+              CAPTION="🚀 *New Release: Atmo Engine*
+            
+              🏷 *Tag:* v$VER
+              📂 *Build:* $BUILD_LABEL
+            
+              🔗 [View on GitHub]($RELEASE_URL)"
+            
+              # Send to Telegram
+              curl -s -F "chat_id=$CHAT_ID" \
+                   -F document=@"$FILE_PATH" \
+                   -F parse_mode=Markdown \
+                   -F caption="$CAPTION" \
+                   https://api.telegram.org/bot$BOT_TOKEN/sendDocument
+            }
+            
+            # 3. Upload Android 16+ (Preview)
+            upload_telegram "./app-release-android-16+.apk" "🌟 Android 16+ (Preview Version)"
+            
+            # 4. Upload Android 13+ (Standard)
+            upload_telegram "./app-release-android-13+.apk" "📱 Android 13+ (Standard Version)"
