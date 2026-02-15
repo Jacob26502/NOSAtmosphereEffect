@@ -1,0 +1,63 @@
+name: Telegram Notification
+
+# Trigger this workflow only when a Release is published
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # We wait briefly to ensure the previous workflow has fully finished uploading assets
+      - name: Wait for Assets
+        run: sleep 15
+
+      - name: Download Release Assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Downloads all assets from the release that triggered this workflow
+          gh release download ${{ github.event.release.tag_name }} --dir ./release_assets
+
+      - name: Upload to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TAG: ${{ github.event.release.tag_name }}
+          URL: ${{ github.event.release.html_url }}
+        run: |
+          cd release_assets
+          
+          # Define the reusable upload function
+          upload_telegram() {
+            FILE_NAME="$1"
+            BUILD_LABEL="$2"
+          
+            if [ -f "$FILE_NAME" ]; then
+              echo "✅ Found $FILE_NAME, uploading..."
+          
+              CAPTION="🚀 *New Release: Atmosphere Effect*
+
+              🏷 *Tag:* $TAG
+              📂 *Build:* $BUILD_LABEL
+
+              🔗 [View on GitHub]($URL)"
+          
+              # Send to Telegram
+              curl -s -F "chat_id=$CHAT_ID" \
+                   -F document=@"$FILE_NAME" \
+                   -F parse_mode=Markdown \
+                   -F caption="$CAPTION" \
+                   https://api.telegram.org/bot$BOT_TOKEN/sendDocument
+            else
+              echo "⚠️ File $FILE_NAME not found in release assets."
+            fi
+          }
+
+          # Trigger uploads
+          upload_telegram "app-release-android-16+.apk" "🌟 Android 16+ (Preview Version)"
+          upload_telegram "app-release-android-13+.apk" "📱 Android 13+ (Standard Version)"
