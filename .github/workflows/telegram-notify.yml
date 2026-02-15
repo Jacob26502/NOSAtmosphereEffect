@@ -37,8 +37,8 @@ jobs:
           MESSAGE="🚀 <b>New Release: $TAG</b>
 
           ⬇️ <b>Click to Download:</b>
-          • <a href=\"$LINK_16\">Android 16+ (Preview)</a>
-          • <a href=\"$LINK_13\">Android 13+ (Standard)</a>"
+          • <a href=\"$LINK_16\">Android 16+</a>
+          • <a href=\"$LINK_13\">Android 13+</a>"
 
           # 2. Send Message & Capture Response
           # We save the JSON response to a variable so we can extract the Message ID
