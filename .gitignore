@@ -8,6 +8,8 @@ local.properties
 /app/debug
 /app/release
 /app/build
+/app/v33
+/app/v36
 .externalNativeBuild
 .cxx
 .kotlin

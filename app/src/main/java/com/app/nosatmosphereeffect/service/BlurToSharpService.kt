@@ -29,6 +29,7 @@ class BlurToSharpService : GLWallpaperService() {
     }
 
     inner class AtmosphereEngine : GLEngine() {
+        private var cachedColors: WallpaperColors? = null
         private var pollInterval: Long = if (isSamsungDevice()) 30000L else 50L
         private var lockDelay: Long = if (isSamsungDevice()) 0L else 800L
         private var animDuration: Long = 1500L
@@ -82,12 +83,13 @@ class BlurToSharpService : GLWallpaperService() {
                                 activeFile.delete()
                             }
                             nextFile.renameTo(activeFile)
+                            cachedColors = null
 
                             // Save timestamp
                             prefs.edit().putLong("last_rotation_timestamp", currentTime).apply()
-                            if (enableSystemColorUpdate) {
-                                notifyColorsChanged()
-                            }
+
+                            notifyColorsChanged()
+
                         }
                         // --- RING BUFFER LOGIC END ---
 
@@ -136,19 +138,32 @@ class BlurToSharpService : GLWallpaperService() {
         }
 
         override fun onComputeColors(): WallpaperColors? {
+
+            val defaultDarkColors = WallpaperColors(android.graphics.Color.valueOf(android.graphics.Color.BLACK), null, null)
+
+            if (!enableSystemColorUpdate) {
+                return defaultDarkColors
+            }
+
+            if (cachedColors != null) {
+                return cachedColors
+            }
+
             try {
                 val file = File(filesDir, "wallpaper.jpg")
                 if (file.exists()) {
-                    val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                    val options = BitmapFactory.Options().apply {
+                        inSampleSize = 2
+                    }
+                    val bitmap = BitmapFactory.decodeFile(file.absolutePath, options)
                     if (bitmap != null) {
-                        val colors = WallpaperColors.fromBitmap(bitmap)
+                        cachedColors = WallpaperColors.fromBitmap(bitmap)
                         bitmap.recycle() // Clean up memory immediately
-                        return colors
+                        return cachedColors
                     }
                 }
-            } catch (e: Exception) {
-            }
-            return super.onComputeColors()
+            } catch (e: Exception) { }
+            return defaultDarkColors
         }
         private val unlockChecker = object : Runnable {
             override fun run() {
@@ -192,18 +207,15 @@ class BlurToSharpService : GLWallpaperService() {
                         }
                     }
                     "com.app.nosatmosphereeffect.RELOAD_WALLPAPER" -> {
+                        cachedColors = null
                         myRenderer?.reloadTexture()
                         requestRender()
-                        if (enableSystemColorUpdate) {
-                            notifyColorsChanged()
-                        }
+                        notifyColorsChanged()
                     }
                     "com.app.nosatmosphereeffect.UPDATE_CONFIG" -> {
                         updateRendererConfig()
                         requestRender()
-                        if (enableSystemColorUpdate) {
-                            notifyColorsChanged()
-                        }
+                        notifyColorsChanged()
                     }
                 }
             }

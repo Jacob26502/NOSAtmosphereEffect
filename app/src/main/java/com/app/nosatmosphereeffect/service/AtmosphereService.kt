@@ -29,6 +29,7 @@ class AtmosphereService : GLWallpaperService() {
     }
 
     inner class AtmosphereEngine : GLEngine() {
+        private var cachedColors: WallpaperColors? = null
         private var pollInterval: Long = if (isSamsungDevice()) 30000L else 50L
         private var lockDelay: Long = if (isSamsungDevice()) 0L else 800L
         private var animDuration: Long = 2500L
@@ -82,12 +83,13 @@ class AtmosphereService : GLWallpaperService() {
                                 activeFile.delete()
                             }
                             nextFile.renameTo(activeFile)
+                            cachedColors = null
 
                             // Save timestamp
                             prefs.edit().putLong("last_rotation_timestamp", currentTime).apply()
-                            if (enableSystemColorUpdate) {
-                                notifyColorsChanged()
-                            }
+
+                            notifyColorsChanged()
+
                         }
                         // --- RING BUFFER LOGIC END ---
 
@@ -136,19 +138,32 @@ class AtmosphereService : GLWallpaperService() {
         }
 
         override fun onComputeColors(): WallpaperColors? {
-                try {
-                    val file = File(filesDir, "wallpaper.jpg")
-                    if (file.exists()) {
-                        val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-                        if (bitmap != null) {
-                            val colors = WallpaperColors.fromBitmap(bitmap)
-                            bitmap.recycle() // Clean up memory immediately
-                            return colors
-                        }
+
+            val defaultDarkColors = WallpaperColors(android.graphics.Color.valueOf(android.graphics.Color.BLACK), null, null)
+
+            if (!enableSystemColorUpdate) {
+                return defaultDarkColors
+            }
+
+            if (cachedColors != null) {
+                return cachedColors
+            }
+
+            try {
+                val file = File(filesDir, "wallpaper.jpg")
+                if (file.exists()) {
+                    val options = BitmapFactory.Options().apply {
+                        inSampleSize = 2
                     }
-                } catch (e: Exception) {
+                    val bitmap = BitmapFactory.decodeFile(file.absolutePath, options)
+                    if (bitmap != null) {
+                        cachedColors = WallpaperColors.fromBitmap(bitmap)
+                        bitmap.recycle() // Clean up memory immediately
+                        return cachedColors
+                    }
                 }
-            return super.onComputeColors()
+            } catch (e: Exception) { }
+            return defaultDarkColors
         }
         private val unlockChecker = object : Runnable {
             override fun run() {
@@ -192,18 +207,15 @@ class AtmosphereService : GLWallpaperService() {
                         }
                     }
                     "com.app.nosatmosphereeffect.RELOAD_WALLPAPER" -> {
+                        cachedColors = null
                         myRenderer?.reloadTexture()
                         requestRender()
-                        if (enableSystemColorUpdate) {
-                            notifyColorsChanged()
-                        }
+                        notifyColorsChanged()
                     }
                     "com.app.nosatmosphereeffect.UPDATE_CONFIG" -> {
                         updateRendererConfig()
                         requestRender()
-                        if (enableSystemColorUpdate) {
-                            notifyColorsChanged()
-                        }
+                        notifyColorsChanged()
                     }
                 }
             }
