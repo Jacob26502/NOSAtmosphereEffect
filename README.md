@@ -34,30 +34,16 @@ After selecting an effect, you will be prompted to choose your wallpaper mode:
 
 ### 3\. Application & Activation
 
-The setup process differs slightly depending on which effect you selected. Please follow the instructions for your chosen mode:
+Please follow these simple steps to apply the wallpaper:
 
-#### 🅰️ If you chose "Sharp -> Blur Effect":
+1. **Apply the Wallpaper:** Once you are happy with your crop or playlist selection, tap the **"Apply"** button.
+2. **Review Instructions:** A dialog box will appear with instructions to set the wallpaper to both screens. Tap **"Set Wallpaper"** to proceed.
+3. **Set Wallpaper:** The app will redirect you to the Android System's Live Wallpaper preview screen. Tap **"Set Wallpaper"** (or the checkmark/apply icon, depending on your device).
+4. **MANDATORY Selection:** When prompted, you must select **"Home screen and Lock screen"**.
+   > *Why? Both screens must be controlled by the live wallpaper to ensure a smooth transition when you unlock your device.*
+5. **Finish:** Setup is complete! Lock and unlock your screen to see the applied effect in action.
 
-1.  **Configure Options:** A dialog will appear with two checkboxes:
-    * **Option 1: Set Static Lock Screen**
-        * *What it does:* Sets the cropped image as your system Lock Screen wallpaper.
-        * *⚠️ Samsung Users:* Enabling this may cause the Adaptive Clock to stop working. If you need the adaptive clock, uncheck this and set the lock screen manually later.
-    * **Option 2: Save Copy to Gallery**
-        * *What it does:* Saves the cropped image to `Pictures/Atmosphere` for backup.
-2.  **Activate Live Wallpaper:**
-    * The app will redirect you to the Android System's Live Wallpaper preview.
-    * Tap **"Set Wallpaper"**.
-    * **MANDATORY:** You must select **ONLY "Home Screen"** (It'll also work fine for most of the devices if you select Home Screen and Lock Screen and always select Home Screen and Lock Screen in Playlist Mode).
-    * *> Why? The Original effect works by transitioning from a static Lock Screen image to the Live Wallpaper on the Home Screen.*
 
-#### 🅱️ If you chose "Blur -> Sharp Effect":
-
-1.  **Proceed to Preview:** You will be prompted to apply the wallpaper.
-2.  **Activate Live Wallpaper:**
-    * The app will redirect you to the Android System's Live Wallpaper preview.
-    * Tap **"Set Wallpaper"**.
-    * **MANDATORY:** You must select **"Home Screen and Lock Screen"**.
-    * *> Why? The Reverse effect runs entirely as a live wallpaper to handle the blurred state while the phone is locked.*
 ## Advanced Customization
 Take full control of the animation and look. You can now tweak the following settings dynamically:
 ### Visual Adjustments

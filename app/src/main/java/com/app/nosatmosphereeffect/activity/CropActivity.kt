@@ -204,33 +204,17 @@ class CropActivity : AppCompatActivity() {
     }
 
     private fun showApplyDialog(bitmap: Bitmap) {
-        val options = arrayOf("Set Static Lock Screen", "Save Copy to Gallery")
-        val checkedItems = booleanArrayOf(true, false)
-
         MaterialAlertDialogBuilder(this)
-            .setTitle("Apply Options")
-            .setMultiChoiceItems(options, checkedItems) { _, which, isChecked ->
-                checkedItems[which] = isChecked
-            }
-            .setPositiveButton("Apply") { _, _ ->
-                MaterialAlertDialogBuilder(this)
-                    .setTitle("Action Required")
-                    .setMessage("In the next screen, please select:\n\nSet Wallpaper > Home Screen\n\n(Do not select Lock Screen, as it is already set).")
-                    .setPositiveButton("I Understand") { _, _ ->
-                        applyWallpaper(
-                            bitmap,
-                            setLockScreen = checkedItems[0],
-                            saveToGallery = checkedItems[1]
-                        )
-                    }
-                    .setCancelable(false)
-                    .show()
+            .setTitle("Apply Wallpaper")
+            .setMessage("In the next screen, please select:\n\nSet Wallpaper > Home Screen and Lock Screen.\n\n(This ensures the lock screen effect works correctly).")
+            .setPositiveButton("Set Wallpaper") { _, _ ->
+                applyWallpaper(bitmap)
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun applyWallpaper(bitmap: Bitmap, setLockScreen: Boolean, saveToGallery: Boolean) {
+    private fun applyWallpaper(bitmap: Bitmap) {
         Toast.makeText(this, "Applying...", Toast.LENGTH_SHORT).show()
 
         Thread {
@@ -253,16 +237,6 @@ class CropActivity : AppCompatActivity() {
                 if (nextWallpaper.exists()) nextWallpaper.delete()
 
                 saveFixedWallpaper(bitmap)
-
-                if (saveToGallery) {
-                    deleteOldBackups()
-                    saveToPublicGallery(bitmap)
-                }
-
-                if (setLockScreen) {
-                    val wm = WallpaperManager.getInstance(this)
-                    wm.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
-                }
 
                 runOnUiThread {
                     Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
@@ -291,50 +265,6 @@ class CropActivity : AppCompatActivity() {
         out.flush()
         out.close()
     }
-
-    private fun deleteOldBackups() {
-        try {
-            val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-            val projection = arrayOf(MediaStore.Images.Media._ID)
-            val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ? AND ${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
-            val selectionArgs = arrayOf("Atmosphere_%", "%Atmosphere%")
-
-            contentResolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
-                    val deleteUri = ContentUris.withAppendedId(collection, id)
-                    contentResolver.delete(deleteUri, null, null)
-                }
-            }
-        } catch (e: Exception) { Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
-    }
-
-    private fun saveToPublicGallery(bitmap: Bitmap) {
-        try {
-            val filename = "Atmosphere_${System.currentTimeMillis()}.jpg"
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Atmosphere")
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-
-            val resolver = contentResolver
-            val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-
-            if (uri != null) {
-                resolver.openOutputStream(uri).use { stream ->
-                    if (stream != null) {
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                    }
-                }
-                contentValues.clear()
-                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                resolver.update(uri, contentValues, null, null)
-            }
-        } catch (e: Exception) { Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
-    }
-
     private fun activateService() {
         try {
             val serviceClass = if (effectId == "FROSTED") {
@@ -355,12 +285,5 @@ class CropActivity : AppCompatActivity() {
         } finally {
             finish()
         }
-    }
-
-    private fun goHome() {
-        val intent = Intent(this, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        startActivity(intent)
-        finish()
     }
 }
