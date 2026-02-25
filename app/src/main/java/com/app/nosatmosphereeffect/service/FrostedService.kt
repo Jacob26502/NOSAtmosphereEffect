@@ -140,11 +140,7 @@ class FrostedService : GLWallpaperService() {
             val defaultDarkColors = WallpaperColors(android.graphics.Color.valueOf(android.graphics.Color.BLACK), null, null)
 
             if (!enableSystemColorUpdate) {
-                if(cachedColors == null || cachedColors != defaultDarkColors){
-                    cachedColors = defaultDarkColors
-                    return defaultDarkColors
-                }
-                return super.onComputeColors()
+                return defaultDarkColors
             }
 
             if (cachedColors != null) {
