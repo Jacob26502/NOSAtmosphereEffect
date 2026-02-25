@@ -87,9 +87,9 @@ class BlurToSharpService : GLWallpaperService() {
 
                             // Save timestamp
                             prefs.edit().putLong("last_rotation_timestamp", currentTime).apply()
-                            if (enableSystemColorUpdate) {
-                                notifyColorsChanged()
-                            }
+
+                            notifyColorsChanged()
+
                         }
                         // --- RING BUFFER LOGIC END ---
 
@@ -202,6 +202,7 @@ class BlurToSharpService : GLWallpaperService() {
                         }
                     }
                     "com.app.nosatmosphereeffect.RELOAD_WALLPAPER" -> {
+                        cachedColors = null
                         myRenderer?.reloadTexture()
                         requestRender()
                         notifyColorsChanged()
