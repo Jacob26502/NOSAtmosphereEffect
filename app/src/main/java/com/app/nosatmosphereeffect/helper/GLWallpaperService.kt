@@ -4,6 +4,7 @@ import android.content.Context
 import android.opengl.GLSurfaceView
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
+import android.graphics.PixelFormat
 
 abstract class GLWallpaperService : WallpaperService() {
 
@@ -12,6 +13,7 @@ abstract class GLWallpaperService : WallpaperService() {
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
+            surfaceHolder.setFormat(PixelFormat.OPAQUE)
             glSurfaceView = WallpaperGLSurfaceView(this@GLWallpaperService)
         }
 
@@ -51,7 +53,7 @@ abstract class GLWallpaperService : WallpaperService() {
 
         inner class WallpaperGLSurfaceView(context: Context) : GLSurfaceView(context) {
             init {
-                setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+                setEGLConfigChooser(8, 8, 8, 0, 16, 0)
                 setEGLContextClientVersion(3)
                 preserveEGLContextOnPause = true
             }
