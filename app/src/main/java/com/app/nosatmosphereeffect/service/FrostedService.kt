@@ -136,12 +136,21 @@ class FrostedService : GLWallpaperService() {
         }
 
         override fun onComputeColors(): WallpaperColors? {
+
+            val defaultDarkColors = WallpaperColors(android.graphics.Color.valueOf(android.graphics.Color.BLACK), null, null)
+
             if (!enableSystemColorUpdate) {
+                if(cachedColors == null || cachedColors != defaultDarkColors){
+                    cachedColors = defaultDarkColors
+                    return defaultDarkColors
+                }
                 return super.onComputeColors()
             }
+
             if (cachedColors != null) {
                 return cachedColors
             }
+
             try {
                 val file = File(filesDir, "wallpaper.jpg")
                 if (file.exists()) {
@@ -156,7 +165,7 @@ class FrostedService : GLWallpaperService() {
                     }
                 }
             } catch (e: Exception) { }
-            return super.onComputeColors()
+            return defaultDarkColors
         }
         private val unlockChecker = object : Runnable {
             override fun run() {
