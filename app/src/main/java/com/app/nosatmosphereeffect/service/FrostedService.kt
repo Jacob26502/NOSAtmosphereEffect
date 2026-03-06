@@ -53,6 +53,32 @@ class FrostedService : GLWallpaperService() {
 
                 val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
                 val intervalMinutes = prefs.getLong("rotation_interval_minutes", 0)
+                if (intervalMinutes == -1L) {
+                    val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                    val targetIndex = if (isNightMode) 1 else 0
+                    val targetFile = File(playlistDir, "wallpaper_$targetIndex.jpg")
+
+                    if (targetFile.exists()) {
+                        val currentThemeIndex = prefs.getInt("active_theme_index", -99)
+                        // Only transition if theme actually changed
+                        if (currentThemeIndex != targetIndex) {
+                            val nextBitmap = BitmapFactory.decodeFile(targetFile.absolutePath)
+                            if (nextBitmap != null) {
+                                myRenderer?.queuePlaylistTransition(nextBitmap)
+                                requestRender()
+
+                                val activeFile = File(filesDir, "wallpaper.jpg")
+                                if (activeFile.exists()) activeFile.delete()
+                                targetFile.copyTo(activeFile, overwrite = true)
+
+                                cachedColors = null
+                                prefs.edit().putInt("active_theme_index", targetIndex).apply()
+                                notifyColorsChanged()
+                            }
+                        }
+                    }
+                    return@Thread // End thread, do not run time-based rotation
+                }
                 val lastRotationTime = prefs.getLong("last_rotation_timestamp", 0)
                 val currentTime = System.currentTimeMillis()
                 val diffMinutes = (currentTime - lastRotationTime) / 60000
@@ -209,6 +235,9 @@ class FrostedService : GLWallpaperService() {
                         requestRender()
                         notifyColorsChanged()
                     }
+                    Intent.ACTION_CONFIGURATION_CHANGED -> {
+                        rotateWallpaper()
+                    }
                 }
             }
         }
@@ -226,6 +255,7 @@ class FrostedService : GLWallpaperService() {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_CONFIGURATION_CHANGED)
                 addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
                 addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
             }

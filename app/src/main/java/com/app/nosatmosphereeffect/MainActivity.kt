@@ -26,14 +26,25 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutSettings: LinearLayout
     private lateinit var layoutColors: LinearLayout
     private lateinit var sliderDimness: Slider
-
     private lateinit var btnUpdateDimness: Button
-    private lateinit var btnMainAction: Button
     private lateinit var btnAdvanceSettings: Button
     private lateinit var cardBlurSettings: View
     private lateinit var sliderBlurStrength: Slider
     private lateinit var btnUpdateBlur: Button
-    private lateinit var btnRotationInterval: Button
+    private lateinit var btnSetupWallpaper: Button
+    private lateinit var layoutUpdateWallpaper: LinearLayout
+    private lateinit var btnUpdateEffect: Button
+    private lateinit var btnUpdateWallpaper: Button
+
+    private val pickSingleImage = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        uri?.let { launchCropActivity(it) }
+    }
+
+    private val pickMultipleImages = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetMultipleContents()) { uris: List<android.net.Uri> ->
+        if (uris.isNotEmpty()) {
+            launchMultiCropActivity(ArrayList(uris))
+        }
+    }
     private lateinit var switchColors: MaterialSwitch
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,20 +54,35 @@ class MainActivity : AppCompatActivity() {
 
         initializeSmartDefaults()
 
+        btnSetupWallpaper = findViewById(R.id.btnSetupWallpaper)
+        layoutUpdateWallpaper = findViewById(R.id.layoutUpdateWallpaper)
+        btnUpdateEffect = findViewById(R.id.btnUpdateEffect)
+        btnUpdateWallpaper = findViewById(R.id.btnUpdateWallpaper)
+
         layoutSettings = findViewById(R.id.layoutSettings)
         layoutColors = findViewById(R.id.layoutColors)
         sliderDimness = findViewById(R.id.sliderDimness)
         btnUpdateDimness = findViewById(R.id.btnUpdateDimness)
-        btnMainAction = findViewById(R.id.btnMainAction)
         btnAdvanceSettings = findViewById(R.id.btnAdvanceSettings)
         cardBlurSettings = findViewById(R.id.cardBlurSettings)
         sliderBlurStrength = findViewById(R.id.sliderBlurStrength)
         btnUpdateBlur = findViewById(R.id.btnUpdateBlur)
-        btnRotationInterval = findViewById(R.id.btnRotationInterval)
         switchColors = findViewById(R.id.switchNotifyColors)
 
-        btnMainAction.setOnClickListener {
+        btnSetupWallpaper.setOnClickListener {
             startActivity(Intent(this, EffectSelectionActivity::class.java))
+        }
+
+        // Update Only Effect
+        btnUpdateEffect.setOnClickListener {
+            val intent = Intent(this, EffectSelectionActivity::class.java)
+            intent.putExtra("UPDATE_EFFECT_ONLY", true)
+            startActivity(intent)
+        }
+
+        // Update Only Wallpaper (Image)
+        btnUpdateWallpaper.setOnClickListener {
+            showImageSelectionDialog()
         }
 
         btnAdvanceSettings.setOnClickListener {
@@ -80,10 +106,6 @@ class MainActivity : AppCompatActivity() {
         }
         btnUpdateBlur.setOnClickListener {
             applyBlurUpdate()
-        }
-
-        btnRotationInterval.setOnClickListener {
-            showRotationIntervalDialog()
         }
 
         switchColors.setOnCheckedChangeListener { _, isChecked ->
@@ -127,7 +149,8 @@ class MainActivity : AppCompatActivity() {
     private fun checkWallpaperStatus() {
         val activeEffect = getActiveEffectType()
         if (activeEffect != null) {
-            btnMainAction.setText(R.string.action_change_effect)
+            btnSetupWallpaper.visibility = View.GONE
+            layoutUpdateWallpaper.visibility = View.VISIBLE
             layoutSettings.visibility = View.VISIBLE
             loadCurrentDimness()
             layoutColors.visibility = View.VISIBLE
@@ -171,9 +194,6 @@ class MainActivity : AppCompatActivity() {
                 prefs.edit().putString("last_known_wallpaper_mode", currentMode).apply()
             }
 
-            // 3. UI Updates
-            btnRotationInterval.visibility = if (isPlaylistMode) View.VISIBLE else View.GONE
-
             // 4. Sync Switch UI
             switchColors.setOnCheckedChangeListener(null)
             // Now safe to read because we auto-corrected above if needed
@@ -188,9 +208,9 @@ class MainActivity : AppCompatActivity() {
             }
 
         } else {
-            btnMainAction.setText(R.string.action_select_effect)
+            btnSetupWallpaper.visibility = View.VISIBLE
+            layoutUpdateWallpaper.visibility = View.GONE
             layoutSettings.visibility = View.GONE
-            btnRotationInterval.visibility = View.GONE
             layoutColors.visibility = View.GONE
         }
     }
@@ -291,5 +311,43 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
             .show()
+    }
+    private fun showImageSelectionDialog() {
+        val options = arrayOf("Single Image", "Multiple Images (Playlist)")
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Select Wallpaper Mode")
+            .setItems(options) { _, which ->
+                if (which == 0) pickSingleImage.launch("image/*")
+                else pickMultipleImages.launch("image/*")
+            }
+            .show()
+    }
+
+    private fun launchCropActivity(uri: android.net.Uri) {
+        val effectId = getActiveEffectType() ?: "ORIGINAL"
+        val intent = if (effectId.contains("REVERSE")) {
+            Intent(this, com.app.nosatmosphereeffect.activity.BlurToSharpCropActivity::class.java)
+        } else {
+            Intent(this, com.app.nosatmosphereeffect.activity.CropActivity::class.java)
+        }
+        intent.data = uri
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        intent.putExtra("EFFECT_ID", effectId)
+        startActivity(intent)
+    }
+
+    private fun launchMultiCropActivity(uris: ArrayList<android.net.Uri>) {
+        val effectId = getActiveEffectType() ?: "ORIGINAL"
+        val intent = Intent(this, com.app.nosatmosphereeffect.activity.PlaylistEditorActivity::class.java)
+        intent.data = uris[0]
+        val clipData = android.content.ClipData.newUri(contentResolver, "Images", uris[0])
+        for (i in 1 until uris.size) {
+            clipData.addItem(android.content.ClipData.Item(uris[i]))
+        }
+        intent.clipData = clipData
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        intent.putParcelableArrayListExtra("IMAGE_URIS", uris)
+        intent.putExtra("EFFECT_ID", effectId)
+        startActivity(intent)
     }
 }

@@ -42,17 +42,53 @@
             android:layout_marginBottom="48dp"/>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnMainAction"
+            android:id="@+id/btnSetupWallpaper"
             style="@style/Widget.Material3.Button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="56dp"
-            android:text="@string/action_select_effect"
+            android:text="Setup Wallpaper"
             android:textSize="16sp"
             app:icon="@android:drawable/ic_menu_gallery"
             app:iconGravity="textStart"
             android:backgroundTint="@color/brand_primary"
             android:textColor="?attr/colorOnPrimary" />
+
+        <LinearLayout
+            android:id="@+id/layoutUpdateWallpaper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp"
+            android:weightSum="2">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUpdateEffect"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:minHeight="56dp"
+                android:layout_marginEnd="8dp"
+                android:text="Change\nEffect"
+                android:textAlignment="center"
+                app:icon="@drawable/ic_info"
+                app:iconGravity="top"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUpdateWallpaper"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:minHeight="56dp"
+                android:layout_marginStart="8dp"
+                android:text="Change\nImage"
+                android:textAlignment="center"
+                app:icon="@android:drawable/ic_menu_gallery"
+                app:iconGravity="top"/>
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/layoutSettings"
@@ -209,15 +245,6 @@
                 android:text="@string/fine_tune"
                 android:backgroundTint="@color/brand_primary"
                 android:textColor="@color/brand_on_primary"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRotationInterval"
-                style="@style/Widget.Material3.Button"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Update Wallpaper Rotation Interval"
-                android:backgroundTint="@color/btn_update_selector"
-                android:textColor="@color/text_update_selector"/>
         </LinearLayout>
 
     </LinearLayout>
