@@ -38,6 +38,29 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val defaultDuration = if (activeEffect == "REVERSE") 1500L else if (activeEffect == "ORIGINAL") 2500L else 500L
         val defaultPoll = if (isSamsung) 30000L else 50L
         val defaultDelay = if (isSamsung) 0L else 800L
+        val layoutRotationContainer = findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.layoutRotationContainer)
+        val isPlaylistMode = intent.getBooleanExtra("IS_PLAYLIST_MODE", false)
+
+        // Hide if not a playlist
+        layoutRotationContainer.visibility = if (isPlaylistMode) View.VISIBLE else View.GONE
+        val dropdownRotation = findViewById<android.widget.AutoCompleteTextView>(R.id.dropdownRotation)
+        val rotationOptions = arrayOf("System Theme (Light/Dark)", "Every Lock (Instant)", "1 Minute", "15 Minutes", "30 Minutes", "1 Hour", "3 Hours", "6 Hours", "12 Hours", "24 Hours")
+        val rotationValues = longArrayOf(-1, 0, 1, 15, 30, 60, 180, 360, 720, 1440)
+
+        val wpPrefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+        val savedRotation = wpPrefs.getLong("rotation_interval_minutes", 0)
+
+        val adapter = android.widget.ArrayAdapter(this, R.layout.item_dropdown, rotationOptions)
+        dropdownRotation.setAdapter(adapter)
+
+        // Find current selection, default to 'Every Lock' (index 1) if not found
+        val savedIndex = rotationValues.indexOf(savedRotation).takeIf { it >= 0 } ?: 1
+        dropdownRotation.setText(rotationOptions[savedIndex], false)
+
+        var selectedRotationValue = savedRotation
+        dropdownRotation.setOnItemClickListener { _, _, position, _ ->
+            selectedRotationValue = rotationValues[position]
+        }
 
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
 
@@ -111,6 +134,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             val enableNoise = switchNoise.isChecked
             val noiseScale = inputNoiseScale.text.toString().toFloatOrNull() ?: 2000.0f
             val noiseStrength = inputNoiseStrength.text.toString().toFloatOrNull() ?: 0.06f
+
+            wpPrefs.edit().putLong("rotation_interval_minutes", selectedRotationValue).apply()
 
             prefs.edit {
                 putLong("poll_interval", poll)

@@ -55,15 +55,22 @@ class EffectSelectionActivity : AppCompatActivity() {
         setContentView(R.layout.activity_effect_selection)
 
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerEffects)
+        val isUpdateOnly = intent.getBooleanExtra("UPDATE_EFFECT_ONLY", false)
+
         val adapter = EffectsAdapter(effectsList) { item ->
             selectedEffectId = item.id
-            showSelectionDialog()
+            if (isUpdateOnly) {
+                applyEffectDirectly(selectedEffectId)
+            } else {
+                showSelectionDialog() // Old behavior for 1st time
+            }
         }
+        recyclerView.adapter = adapter
         recyclerView.adapter = adapter
     }
 
     private fun showSelectionDialog() {
-        val options = arrayOf("Single Image", "Multiple Images (Playlist) (Experimental)")
+        val options = arrayOf("Single Image", "Multiple Images (Playlist)")
         MaterialAlertDialogBuilder(this)
             .setTitle("Select Wallpaper Mode")
             .setItems(options) { _, which ->
@@ -101,6 +108,19 @@ class EffectSelectionActivity : AppCompatActivity() {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         intent.putParcelableArrayListExtra("IMAGE_URIS", uris)
         intent.putExtra("EFFECT_ID", selectedEffectId)
+        startActivity(intent)
+        finish()
+    }
+    private fun applyEffectDirectly(effectId: String) {
+        val serviceClass = when(effectId) {
+            "ORIGINAL" -> com.app.nosatmosphereeffect.service.AtmosphereService::class.java
+            "REVERSE" -> com.app.nosatmosphereeffect.service.BlurToSharpService::class.java
+            "FROSTED" -> com.app.nosatmosphereeffect.service.FrostedService::class.java
+            "FROSTED_REVERSE" -> com.app.nosatmosphereeffect.service.FrostedReverseService::class.java
+            else -> com.app.nosatmosphereeffect.service.AtmosphereService::class.java
+        }
+        val intent = Intent(android.app.WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
+        intent.putExtra(android.app.WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, android.content.ComponentName(this, serviceClass))
         startActivity(intent)
         finish()
     }

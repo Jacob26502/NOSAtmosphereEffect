@@ -41,64 +41,84 @@ class FrostedService : GLWallpaperService() {
             prepareForNextUnlock()
         }
 
-        private fun rotateWallpaper() {
-            // Run all I/O on background thread
+        // Called instantly when the OS configuration changes
+        fun handleThemeChange(isNightMode: Boolean) {
+            rotateWallpaper(isThemeChange = true, currentNightMode = isNightMode)
+        }
+
+        private fun rotateWallpaper(isThemeChange: Boolean = false, currentNightMode: Boolean = false) {
             Thread {
                 val playlistDir = File(filesDir, "playlist")
                 val playlistFiles = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
 
-                if (playlistFiles == null || playlistFiles.size <= 1) {
-                    return@Thread
-                }
+                if (playlistFiles == null || playlistFiles.size <= 1) return@Thread
 
                 val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
                 val intervalMinutes = prefs.getLong("rotation_interval_minutes", 0)
-                val lastRotationTime = prefs.getLong("last_rotation_timestamp", 0)
-                val currentTime = System.currentTimeMillis()
-                val diffMinutes = (currentTime - lastRotationTime) / 60000
 
-                if (intervalMinutes > 0 && diffMinutes < intervalMinutes) {
+                // --- FEATURE: THEME SYNC ---
+                if (isThemeChange) {
+                    if (intervalMinutes == -1L) {
+                        val savedTheme = prefs.getInt("active_theme_state", -1)
+                        val newThemeState = if (currentNightMode) 1 else 0
+
+                        // Only rotate if the theme actually flipped
+                        // (prevents duplicate triggers from screen rotations etc.)
+                        if (savedTheme != newThemeState) {
+                            prefs.edit().putInt("active_theme_state", newThemeState).apply()
+                            executeRotationRingBuffer(prefs)
+                        }
+                    }
+                    return@Thread // End thread, we handled the theme broadcast
+                }
+
+                // --- FEATURE: TIME/LOCK ROTATION ---
+                if (intervalMinutes > 0) {
+                    val lastRotationTime = prefs.getLong("last_rotation_timestamp", 0)
+                    val currentTime = System.currentTimeMillis()
+                    val diffMinutes = (currentTime - lastRotationTime) / 60000
+
+                    if (diffMinutes < intervalMinutes) return@Thread
+                } else if (intervalMinutes == -1L) {
+                    // System Theme mode is active, but this wasn't a theme change trigger
+                    // (e.g. triggered by screen turning off). Do not rotate.
                     return@Thread
                 }
 
-                val nextFile = File(filesDir, "next_wallpaper.jpg")
-                val activeFile = File(filesDir, "wallpaper.jpg")
+                // If interval is 0 (Every Lock) or time has passed, execute rotation
+                executeRotationRingBuffer(prefs)
 
-                if (nextFile.exists()) {
-                    try {
-                        // --- RING BUFFER LOGIC START ---
-                        // We decode the NEW image first, without touching the ACTIVE file yet.
-                        val nextBitmap = BitmapFactory.decodeFile(nextFile.absolutePath)
-
-                        if (nextBitmap != null) {
-                            // Send to renderer (Thread Safe)
-                            myRenderer?.queuePlaylistTransition(nextBitmap)
-                            requestRender() // Force a frame to process the swap
-
-                            // Now update disk for persistence (Persistence ONLY)
-                            // We do NOT call resetAndClear(). The renderer handles the swap.
-                            if (activeFile.exists()) {
-                                activeFile.delete()
-                            }
-                            nextFile.renameTo(activeFile)
-                            cachedColors = null
-
-                            // Save timestamp
-                            prefs.edit().putLong("last_rotation_timestamp", currentTime).apply()
-
-                            notifyColorsChanged()
-
-                        }
-                        // --- RING BUFFER LOGIC END ---
-
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    prepareNextWallpaper()
-                } else {
-                    prepareNextWallpaper()
-                }
             }.start()
+        }
+
+        // Standardized rotation function so both modes share the same behavior
+        private fun executeRotationRingBuffer(prefs: android.content.SharedPreferences) {
+            val nextFile = File(filesDir, "next_wallpaper.jpg")
+            val activeFile = File(filesDir, "wallpaper.jpg")
+
+            if (nextFile.exists()) {
+                try {
+                    val nextBitmap = BitmapFactory.decodeFile(nextFile.absolutePath)
+                    if (nextBitmap != null) {
+                        myRenderer?.queuePlaylistTransition(nextBitmap)
+                        requestRender()
+
+                        if (activeFile.exists()) {
+                            activeFile.delete()
+                        }
+                        nextFile.renameTo(activeFile)
+
+                        cachedColors = null
+                        prefs.edit().putLong("last_rotation_timestamp", System.currentTimeMillis()).apply()
+                        notifyColorsChanged()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                prepareNextWallpaper()
+            } else {
+                prepareNextWallpaper()
+            }
         }
 
         private fun prepareNextWallpaper() {
@@ -209,6 +229,10 @@ class FrostedService : GLWallpaperService() {
                         requestRender()
                         notifyColorsChanged()
                     }
+                    Intent.ACTION_CONFIGURATION_CHANGED -> {
+                        val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                        handleThemeChange(isNightMode)
+                    }
                 }
             }
         }
@@ -226,6 +250,7 @@ class FrostedService : GLWallpaperService() {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_CONFIGURATION_CHANGED)
                 addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
                 addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
             }

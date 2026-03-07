@@ -86,6 +86,25 @@
                 android:textColor="@color/white"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutRotationContainer"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Playlist Rotation Mode"
+            app:helperText="Intervals, or sync Image 1(Light)/Image 2(Dark)"
+            app:helperTextTextColor="@color/white_alpha_70"
+            android:layout_marginBottom="24dp">
+
+            <AutoCompleteTextView
+                android:id="@+id/dropdownRotation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:popupBackground="@color/black"
+                android:textColor="@color/white"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switchNoise"
             android:layout_width="match_parent"
