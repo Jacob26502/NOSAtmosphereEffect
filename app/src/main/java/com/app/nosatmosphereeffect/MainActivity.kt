@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutUpdateWallpaper: LinearLayout
     private lateinit var btnUpdateEffect: Button
     private lateinit var btnUpdateWallpaper: Button
+    private lateinit var statusText: android.widget.TextView
 
     private var isPlaylistModeActive = false
 
@@ -56,6 +57,7 @@ class MainActivity : AppCompatActivity() {
 
         initializeSmartDefaults()
 
+        statusText = findViewById(R.id.statusText)
         btnSetupWallpaper = findViewById(R.id.btnSetupWallpaper)
         layoutUpdateWallpaper = findViewById(R.id.layoutUpdateWallpaper)
         btnUpdateEffect = findViewById(R.id.btnUpdateEffect)
@@ -152,6 +154,7 @@ class MainActivity : AppCompatActivity() {
     private fun checkWallpaperStatus() {
         val activeEffect = getActiveEffectType()
         if (activeEffect != null) {
+            statusText.text = "Wallpaper is active! Customize your experience below."
             btnSetupWallpaper.visibility = View.GONE
             layoutUpdateWallpaper.visibility = View.VISIBLE
             layoutSettings.visibility = View.VISIBLE
@@ -211,6 +214,7 @@ class MainActivity : AppCompatActivity() {
             }
 
         } else {
+            statusText.text = getString(R.string.status_instruction)
             btnSetupWallpaper.visibility = View.VISIBLE
             layoutUpdateWallpaper.visibility = View.GONE
             layoutSettings.visibility = View.GONE

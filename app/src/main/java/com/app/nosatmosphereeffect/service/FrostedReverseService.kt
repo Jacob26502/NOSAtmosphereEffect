@@ -229,6 +229,10 @@ class FrostedReverseService : GLWallpaperService() {
                         requestRender()
                         notifyColorsChanged()
                     }
+                    Intent.ACTION_CONFIGURATION_CHANGED -> {
+                        val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                        handleThemeChange(isNightMode)
+                    }
                 }
             }
         }
@@ -247,6 +251,7 @@ class FrostedReverseService : GLWallpaperService() {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_CONFIGURATION_CHANGED)
                 addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
                 addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
             }
