@@ -71,7 +71,7 @@
                 android:layout_height="wrap_content"
                 android:minHeight="56dp"
                 android:layout_marginEnd="8dp"
-                android:text="Change\nEffect"
+                android:text="Update Effect"
                 android:textAlignment="center"
                 app:icon="@drawable/ic_info"
                 app:iconGravity="top"/>
@@ -84,7 +84,7 @@
                 android:layout_height="wrap_content"
                 android:minHeight="56dp"
                 android:layout_marginStart="8dp"
-                android:text="Change\nImage"
+                android:text="Update one or more images"
                 android:textAlignment="center"
                 app:icon="@android:drawable/ic_menu_gallery"
                 app:iconGravity="top"/>

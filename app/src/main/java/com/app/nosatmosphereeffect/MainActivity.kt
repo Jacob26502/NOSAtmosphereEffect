@@ -36,6 +36,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnUpdateEffect: Button
     private lateinit var btnUpdateWallpaper: Button
 
+    private var isPlaylistModeActive = false
+
     private val pickSingleImage = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
         uri?.let { launchCropActivity(it) }
     }
@@ -90,6 +92,7 @@ class MainActivity : AppCompatActivity() {
             val activeEffect = getActiveEffectType() ?: "ORIGINAL"
             intent.putExtra("ACTIVE_EFFECT_TYPE", activeEffect)
             intent.putExtra("IS_SAMSUNG", isSamsungDevice())
+            intent.putExtra("IS_PLAYLIST_MODE", isPlaylistModeActive)
             startActivity(intent)
         }
 
@@ -164,11 +167,11 @@ class MainActivity : AppCompatActivity() {
 
             // 1. Determine Current Mode
             val playlistDir = File(filesDir, "playlist")
-            var isPlaylistMode = false
+            isPlaylistModeActive = false
             if (playlistDir.exists() && playlistDir.isDirectory) {
                 val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
                 if (!files.isNullOrEmpty() && files.size > 1) {
-                    isPlaylistMode = true
+                    isPlaylistModeActive = true
                 }
             }
 
@@ -176,11 +179,11 @@ class MainActivity : AppCompatActivity() {
             // This fixes the "Stored Value is True but Switch is Off" bug.
             val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
             val lastMode = prefs.getString("last_known_wallpaper_mode", "UNKNOWN")
-            val currentMode = if (isPlaylistMode) "PLAYLIST" else "SINGLE"
+            val currentMode = if (isPlaylistModeActive) "PLAYLIST" else "SINGLE"
 
             if (lastMode != currentMode) {
                 // Mode has changed! Force safe defaults.
-                if (isPlaylistMode) {
+                if (isPlaylistModeActive) {
                     // Moving to Playlist -> Force OFF (Performance)
                     prefs.edit().putBoolean("notify_system_colors", false).apply()
                     // Optional: Broadcast this change immediately so Service knows
@@ -197,7 +200,7 @@ class MainActivity : AppCompatActivity() {
             // 4. Sync Switch UI
             switchColors.setOnCheckedChangeListener(null)
             // Now safe to read because we auto-corrected above if needed
-            val shouldNotify = prefs.getBoolean("notify_system_colors", !isPlaylistMode)
+            val shouldNotify = prefs.getBoolean("notify_system_colors", !isPlaylistModeActive)
             switchColors.isChecked = shouldNotify
 
             switchColors.setOnCheckedChangeListener { _, isChecked ->
@@ -289,28 +292,6 @@ class MainActivity : AppCompatActivity() {
 
         btnUpdateBlur.isEnabled = false
         Toast.makeText(this, "Blur Strength Updated!", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun showRotationIntervalDialog() {
-        val intervals = arrayOf("Every Lock (Instant)", "1 Minute", "15 Minutes", "30 Minutes", "1 Hour", "3 Hours", "6 Hours", "12 Hours", "24 Hours")
-        val values = longArrayOf(0, 1, 15, 30, 60, 180, 360, 720, 1440)
-
-        // Get current setting to show selection (Optional)
-        val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
-        val currentVal = prefs.getLong("rotation_interval_minutes", 0)
-        var checkedItem = values.indexOfFirst { it == currentVal }
-        if (checkedItem == -1) checkedItem = 0
-
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("Rotation Interval")
-            .setSingleChoiceItems(intervals, checkedItem) { dialog, which ->
-                val selectedMinutes = values[which]
-                prefs.edit().putLong("rotation_interval_minutes", selectedMinutes).apply()
-
-                android.widget.Toast.makeText(this, "Set to: ${intervals[which]}", android.widget.Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }
-            .show()
     }
     private fun showImageSelectionDialog() {
         val options = arrayOf("Single Image", "Multiple Images (Playlist)")

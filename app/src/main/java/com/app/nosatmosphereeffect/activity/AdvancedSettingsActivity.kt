@@ -38,7 +38,11 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val defaultDuration = if (activeEffect == "REVERSE") 1500L else if (activeEffect == "ORIGINAL") 2500L else 500L
         val defaultPoll = if (isSamsung) 30000L else 50L
         val defaultDelay = if (isSamsung) 0L else 800L
+        val layoutRotationContainer = findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.layoutRotationContainer)
+        val isPlaylistMode = intent.getBooleanExtra("IS_PLAYLIST_MODE", false)
 
+        // Hide if not a playlist
+        layoutRotationContainer.visibility = if (isPlaylistMode) View.VISIBLE else View.GONE
         val dropdownRotation = findViewById<android.widget.AutoCompleteTextView>(R.id.dropdownRotation)
         val rotationOptions = arrayOf("System Theme (Light/Dark)", "Every Lock (Instant)", "1 Minute", "15 Minutes", "30 Minutes", "1 Hour", "3 Hours", "6 Hours", "12 Hours", "24 Hours")
         val rotationValues = longArrayOf(-1, 0, 1, 15, 30, 60, 180, 360, 720, 1440)
