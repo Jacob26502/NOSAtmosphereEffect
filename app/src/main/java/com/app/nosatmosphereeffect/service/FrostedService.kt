@@ -17,14 +17,35 @@ import java.io.File
 
 class FrostedService : GLWallpaperService() {
 
+    private val activeEngines = mutableSetOf<FrostedEngine>()
+
     override fun onCreateEngine(): Engine {
-        return FrostedEngine()
+        val engine = FrostedEngine()
+        activeEngines.add(engine)
+        return engine
     }
 
     override fun getRenderer(): GLSurfaceView.Renderer {
         return FrostedRenderer(applicationContext)
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        val uiMode = newConfig.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+
+        // 3. Only act if explicitly YES or NO. This ignores "UNDEFINED" states during screen rotations that cause false positives!
+        if (uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES ||
+            uiMode == android.content.res.Configuration.UI_MODE_NIGHT_NO) {
+
+            val isNightMode = (uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES)
+
+            // Notify all active engines
+            activeEngines.forEach { engine ->
+                engine.handleThemeChange(isNightMode)
+            }
+        }
+    }
     inner class FrostedEngine : GLEngine() {
         private var cachedColors: WallpaperColors? = null
         private var pollInterval: Long = 50L
@@ -229,10 +250,6 @@ class FrostedService : GLWallpaperService() {
                         requestRender()
                         notifyColorsChanged()
                     }
-                    Intent.ACTION_CONFIGURATION_CHANGED -> {
-                        val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-                        handleThemeChange(isNightMode)
-                    }
                 }
             }
         }
@@ -246,11 +263,16 @@ class FrostedService : GLWallpaperService() {
                 setRenderer(myRenderer!!)
             }
 
+            val currentUiMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            if (currentUiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES ||
+                currentUiMode == android.content.res.Configuration.UI_MODE_NIGHT_NO) {
+                handleThemeChange(currentUiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES)
+            }
+
             val filter = IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_USER_PRESENT)
-                addAction(Intent.ACTION_CONFIGURATION_CHANGED)
                 addAction("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
                 addAction("com.app.nosatmosphereeffect.UPDATE_CONFIG")
             }
@@ -259,6 +281,7 @@ class FrostedService : GLWallpaperService() {
 
         override fun onDestroy() {
             super.onDestroy()
+            activeEngines.remove(this)
             try { unregisterReceiver(systemEventReceiver) } catch (e: Exception) { }
         }
 
