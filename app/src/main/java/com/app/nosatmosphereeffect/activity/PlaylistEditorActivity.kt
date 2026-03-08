@@ -223,8 +223,31 @@ class PlaylistEditorActivity : AppCompatActivity() {
                 }
 
                 // 5. RESET ALL PREFERENCES TO ENSURE FRESH START
-                getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                val wallpaperPrefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+                wallpaperPrefs.edit().clear().apply()
                 getSharedPreferences("app_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+
+                if(playlistItems.size > 1){
+                    val nextFile = File(filesDir, "next_wallpaper.jpg")
+                    val secondFile = File(playlistDir, "wallpaper_1.jpg")
+                    if (secondFile.exists()) {
+                        secondFile.copyTo(nextFile, overwrite = true)
+                    }
+                    // Tell the rotation logic that wallpaper_1 is queued, so it doesn't pick it again next time
+                    wallpaperPrefs.edit().putString("last_playlist_image", "wallpaper_1.jpg").apply()
+                } else if (playlistItems.size == 1) {
+                    // Fallback if only 1 image exists
+                    val nextFile = File(filesDir, "next_wallpaper.jpg")
+                    if (firstFile.exists()) {
+                        firstFile.copyTo(nextFile, overwrite = true)
+                    }
+                    wallpaperPrefs.edit().putString("last_playlist_image", "wallpaper_0.jpg").apply()
+                }
+
+                // --- BUG FIX: Pre-seed current theme state so it doesn't auto-rotate on first boot ---
+                val currentUiMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                val isNightMode = (currentUiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES)
+                wallpaperPrefs.edit().putInt("active_theme_state", if (isNightMode) 1 else 0).apply()
 
                 runOnUiThread {
                     progressDialog.dismiss()
