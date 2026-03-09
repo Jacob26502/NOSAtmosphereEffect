@@ -74,7 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Animation Duration (ms)"
-            app:helperText="Recommended for\nOriginal: 2500ms | Reverse: 1500ms | Frosted: 500ms | Frosted Reverse: 500ms"
+            app:helperText="Recommended for\nOriginal: 2500ms | Reverse: 1500ms | Others: 500ms"
             app:helperTextTextColor="@color/white_alpha_70"
             android:layout_marginBottom="32dp"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
@@ -104,6 +104,39 @@
                 android:popupBackground="@color/black"
                 android:textColor="@color/white"/>
         </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:id="@+id/halftoneSettingsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Halftone Pixel Size"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderDotSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="0.0"
+                android:valueTo="40.0"
+                android:value="12.0"
+                android:stepSize="1.0" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchGrayscale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Black &amp; White Effect"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
 
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switchNoise"

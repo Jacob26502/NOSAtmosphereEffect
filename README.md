@@ -20,6 +20,8 @@ Open the app and choose your desired atmosphere style from the selection screen:
 * **Reverse Atmosphere:** Mysterious reveal. Deep ambient clouds fade to a sharp clear view when unlocked.
 * **Simple Frosted:** Modern minimalism. Applies a clean, uniform frosted glass blur (no clouds).
 * **Simple Frosted (Reverse):** Elegant clarity. Wakes up from a heavy frosted blur into a crystal clear wallpaper.
+* **Halftone Print:** Retro aesthetic. Sharp view dissolves into comic-book CMYK dots when locked.
+* **Halftone Print (Reverse):** Retro aesthetic. CMYK dots seamlessly expand into continuous color when unlocked.
 
 
 ### 2\. Select Image & Playlist Mode
@@ -49,9 +51,11 @@ Take full control of the animation and look. You can now tweak the following set
 ### Visual Adjustments
 * **Dimness Level:** Adjust the darkening overlay to ensure your home screen icons remain readable against bright wallpapers.
 * **Blur Strength:** (Frosted Effects Only) Use the slider to fine-tune the intensity of the blur radius, from a light mist to heavy glass.
-* **Experimental Grain (Noise):** Enable a film-grain texture on top of the blur. You can customize:
+* **Noise Grain:** Enable a film-grain texture on top of the blur. You can customize:
     * **Noise Strength:** How visible the grain is.
     * **Noise Scale:** The size/coarseness of the grain particles.
+* **Halftone Pixel Size:** (Halftone Effects Only) Dynamically adjust the size of the printed dots. Setting this to `0` renders the original continuous tones instead of dots.
+* **Black & White Effect:** (Halftone Effects Only) Converts the CMYK color halftone pattern into a single-channel grayscale newspaper print.
 ### Animation & Behavior
 * **Animation Duration:** Control the total transition duration.
 * **Lock Delay (Anti-Flicker):** Adds a configurable pause before the wallpaper resets when you lock the phone. This prevents the visual glitch where the wallpaper "snaps" back to its initial state before the screen turns fully black.
@@ -59,7 +63,8 @@ Take full control of the animation and look. You can now tweak the following set
 ### Playlist & Rotation
 (Only available when using Multiple Images mode)
 * **Rotation Interval:** Controls how often the wallpaper changes from your playlist.
-    * **Options:** Every Lock (Instant), 15 Minutes, 1 Hour, up to 24 Hours.
+    * **Options:** System Theme (Light/Dark), Every Lock (Instant), 15 Minutes, 1 Hour, up to 24 Hours.
+    * **System Theme Sync:** When selected, the wallpaper will only change when your device switches between Light and Dark mode.
     * **Smart Rotation:** To prevent lag or visual glitches, the wallpaper only rotates when the screen is OFF.
     * *Example:* If you set "15 Minutes", the app checks the time whenever you lock your phone. If 15 minutes have passed since the last change, it swaps the wallpaper in the background so it's ready the next time you unlock.
 
