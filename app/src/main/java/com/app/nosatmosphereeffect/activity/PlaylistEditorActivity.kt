@@ -348,6 +348,8 @@ class PlaylistEditorActivity : AppCompatActivity() {
                 "REVERSE" -> BlurToSharpService::class.java
                 "FROSTED" -> FrostedService::class.java
                 "FROSTED_REVERSE" -> FrostedReverseService::class.java
+                "HALFTONE" -> FrostedService::class.java
+                "HALFTONE_REVERSE" -> FrostedReverseService::class.java
                 else -> AtmosphereService::class.java
             }
             val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)

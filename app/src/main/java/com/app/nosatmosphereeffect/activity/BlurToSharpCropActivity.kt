@@ -24,6 +24,7 @@ import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.TouchImageView
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
+import com.app.nosatmosphereeffect.service.HalftoneService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.FileOutputStream
@@ -248,6 +249,8 @@ class BlurToSharpCropActivity : AppCompatActivity() {
         try {
             val serviceClass = if (effectId == "FROSTED_REVERSE") {
                 FrostedReverseService::class.java
+            } else if (effectId == "HALFTONE_REVERSE"){
+                HalftoneService::class.java
             } else {
                 BlurToSharpService::class.java
             }

@@ -19,6 +19,8 @@ import com.app.nosatmosphereeffect.service.AtmosphereService
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
 import com.app.nosatmosphereeffect.service.FrostedService
+import com.app.nosatmosphereeffect.service.HalftoneReverseService
+import com.app.nosatmosphereeffect.service.HalftoneService
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
@@ -268,6 +270,8 @@ class MainActivity : AppCompatActivity() {
                 BlurToSharpService::class.java.name -> "REVERSE"
                 FrostedService::class.java.name -> "FROSTED"
                 FrostedReverseService::class.java.name -> "FROSTED_REVERSE"
+                HalftoneService::class.java.name -> "HALFTONE"
+                HalftoneReverseService::class.java.name -> "HALFTONE_REVERSE"
                 else -> null
             }
         }

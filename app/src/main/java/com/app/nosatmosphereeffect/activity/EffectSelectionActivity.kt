@@ -36,6 +36,16 @@ class EffectSelectionActivity : AppCompatActivity() {
             id = "FROSTED_REVERSE",
             title = "Simple Frosted (Reverse)",
             description = "Wake up: Blur ➔ Sharp\nElegant clarity. Heavy frost dissolves to crystal clear."
+        ),
+        EffectItem(
+            id = "HALFTONE",
+            title = "Halftone Print",
+            description = "Wake up: Sharp ➔ Halftone\nRetro aesthetic. Sharp view dissolves into comic-book CMYK dots."
+        ),
+        EffectItem(
+            id = "HALFTONE_REVERSE",
+            title = "Halftone Print (Reverse)",
+            description = "Wake up: Halftone ➔ Sharp\nRetro aesthetic. CMYK dots seamlessly expand into continuous color."
         )
     )
 
@@ -117,6 +127,8 @@ class EffectSelectionActivity : AppCompatActivity() {
             "REVERSE" -> com.app.nosatmosphereeffect.service.BlurToSharpService::class.java
             "FROSTED" -> com.app.nosatmosphereeffect.service.FrostedService::class.java
             "FROSTED_REVERSE" -> com.app.nosatmosphereeffect.service.FrostedReverseService::class.java
+            "HALFTONE" -> com.app.nosatmosphereeffect.service.HalftoneService::class.java
+            "HALFTONE_REVERSE" -> com.app.nosatmosphereeffect.service.HalftoneReverseService::class.java
             else -> com.app.nosatmosphereeffect.service.AtmosphereService::class.java
         }
         val intent = Intent(android.app.WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
