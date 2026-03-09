@@ -230,14 +230,24 @@ class MainActivity : AppCompatActivity() {
     }
     private fun updateButtonState(sliderValue: Float) {
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        val currentSavedLevel = prefs.getFloat("dim_level", 0.2f)
+        var defaultValue = 0.2f
+        if(!getActiveEffectType().isNullOrEmpty() && getActiveEffectType()!!.contains("HALFTONE")){
+            defaultValue = 0.0f
+        }
+        val currentSavedLevel = prefs.getFloat("dim_level", defaultValue)
 
         // Enable button only if the slider value differs from the saved value
         btnUpdateDimness.isEnabled = sliderValue != currentSavedLevel
     }
     private fun loadCurrentDimness() {
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        val currentLevel = prefs.getFloat("dim_level", 0.2f)
+
+        var defaultValue = 0.2f
+        if(!getActiveEffectType().isNullOrEmpty() && getActiveEffectType()!!.contains("HALFTONE")){
+            defaultValue = 0.0f
+        }
+
+        val currentLevel = prefs.getFloat("dim_level", defaultValue)
         sliderDimness.value = currentLevel
         updateButtonState(currentLevel)
     }

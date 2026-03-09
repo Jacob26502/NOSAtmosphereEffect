@@ -283,7 +283,7 @@ class HalftoneReverseService : GLWallpaperService(){
 
         private fun updateRendererConfig() {
             val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-            myRenderer?.dimLevel = prefs.getFloat("dim_level", 0.2f)
+            myRenderer?.dimLevel = prefs.getFloat("dim_level", 0.0f)
             enableSystemColorUpdate = prefs.getBoolean("notify_system_colors", false)
             myRenderer?.dotSize = prefs.getFloat("halftone_dot_size", 12.0f)
             myRenderer?.grayscale = prefs.getBoolean("halftone_grayscale", false)

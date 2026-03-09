@@ -32,7 +32,7 @@ class HalftoneRenderer(
     @Volatile private var pendingPlaylistBitmap: Bitmap? = null
 
     var blurStrength: Float = 0.0f
-    @Volatile var dimLevel: Float = 0.2f
+    @Volatile var dimLevel: Float = 0.0f
     @Volatile private var needsReload: Boolean = false
     @Volatile var dotSize: Float = 12.0f
     @Volatile var grayscale: Boolean = false
