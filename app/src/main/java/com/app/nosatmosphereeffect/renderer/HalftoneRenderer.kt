@@ -48,9 +48,8 @@ class HalftoneRenderer(
     )
     private lateinit var vertexBuffer: FloatBuffer
 
-    fun queuePlaylistTransition(bitmap: Bitmap, value: Float = 0.0f) {
+    fun queuePlaylistTransition(bitmap: Bitmap) {
         pendingPlaylistBitmap = bitmap
-        blurStrength = value
     }
 
     fun reloadTexture() {
