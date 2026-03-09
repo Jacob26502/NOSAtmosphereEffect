@@ -51,7 +51,10 @@ class HalftoneReverseService : GLWallpaperService(){
         private var enableSystemColorUpdate: Boolean = false
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
-        private val resetRunnable = Runnable { prepareForNextUnlock() }
+        private val resetRunnable = Runnable {
+            prepareForNextUnlock()
+            rotateWallpaper()
+        }
 
         fun handleThemeChange(isNightMode: Boolean) {
             rotateWallpaper(isThemeChange = true, currentNightMode = isNightMode)
@@ -180,7 +183,6 @@ class HalftoneReverseService : GLWallpaperService(){
                         handler.removeCallbacks(unlockChecker)
                         isLocked = true
                         handler.postDelayed(resetRunnable, lockDelay)
-                        rotateWallpaper()
                     }
                     Intent.ACTION_USER_PRESENT -> {
                         handler.removeCallbacks(resetRunnable)
