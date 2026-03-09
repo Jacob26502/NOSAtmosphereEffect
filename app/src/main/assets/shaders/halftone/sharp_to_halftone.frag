@@ -9,10 +9,6 @@ uniform float uAspectRatio;
 uniform float uBlurStrength; // 1.0 = Sharp, 0.0 = Halftone
 uniform float uDimLevel;
 
-uniform float uEnableNoise;
-uniform float uNoiseScale;
-uniform float uNoiseStrength;
-
 // NEW UNIFORMS
 uniform float uDotSize;
 uniform float uGrayscale;

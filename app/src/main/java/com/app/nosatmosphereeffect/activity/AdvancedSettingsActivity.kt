@@ -110,10 +110,10 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         val isNoiseEnabled = prefs.getBoolean("enable_noise", false)
         switchNoise.isChecked = isNoiseEnabled
-        layoutNoise.visibility = if (isNoiseEnabled) View.VISIBLE else View.GONE
+        layoutNoise.visibility = if (isNoiseEnabled && !activeEffect.contains("HALFTONE")) View.VISIBLE else View.GONE
 
         switchNoise.setOnCheckedChangeListener { _, isChecked ->
-            layoutNoise.visibility = if (isChecked && !activeEffect.contains("HALFTONE")) View.VISIBLE else View.GONE
+            layoutNoise.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
         layoutPoll.setEndIconOnClickListener {
