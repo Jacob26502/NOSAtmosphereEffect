@@ -8,11 +8,14 @@ uniform sampler2D uTextureSharp;
 uniform float uAspectRatio;
 uniform float uBlurStrength; // 1.0 = Sharp, 0.0 = Halftone
 uniform float uDimLevel;
+
 uniform float uEnableNoise;
 uniform float uNoiseScale;
 uniform float uNoiseStrength;
 
-const float DOT_SIZE = 12.0;
+// NEW UNIFORMS
+uniform float uDotSize;
+uniform float uGrayscale;
 
 float random(vec2 co) {
     return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -24,17 +27,20 @@ mat2 rotate2d(float angle) {
     return mat2(c, -s, s, c);
 }
 
-float halftoneChannel(vec2 uv, float angle, float value, vec2 texSize, float transition) {
+// Generates just the dot structure
+float halftoneChannel(vec2 uv, float angle, float value, vec2 texSize, float dotSize) {
     vec2 centerUV = uv - 0.5;
     centerUV.x *= uAspectRatio;
     vec2 rotUV = rotate2d(angle) * centerUV;
-    vec2 gridUV = rotUV * texSize.y / DOT_SIZE;
+
+    vec2 gridUV = rotUV * texSize.y / dotSize;
     vec2 localUV = fract(gridUV) - 0.5;
+
     float dist = length(localUV);
     float radius = sqrt(value) * 0.75;
-    float edge = max(0.05, 1.0 / DOT_SIZE);
-    float binaryDot = smoothstep(radius + edge, radius - edge, dist);
-    return mix(value, binaryDot, transition);
+    float edge = max(0.05, 1.0 / dotSize);
+
+    return smoothstep(radius + edge, radius - edge, dist);
 }
 
 void main() {
@@ -43,26 +49,39 @@ void main() {
     float effectStrength = 1.0 - clamp(uBlurStrength, 0.0, 1.0);
 
     vec3 sharp = texture(uTextureSharp, vTexCoord).rgb;
-    vec3 cmy = 1.0 - sharp;
     vec2 texSize = vec2(textureSize(uTextureSharp, 0));
 
-    float cDot = halftoneChannel(vTexCoord, radians(15.0), cmy.r, texSize, effectStrength);
-    float mDot = halftoneChannel(vTexCoord, radians(75.0), cmy.g, texSize, effectStrength);
-    float yDot = halftoneChannel(vTexCoord, radians(0.0), cmy.b, texSize, effectStrength);
+    vec3 halftoneOutput;
 
-    vec3 finalColor = 1.0 - vec3(cDot, mDot, yDot);
-
-    // Dim applies based on the effect strength
-    finalColor = mix(finalColor, vec3(0.0), uDimLevel * effectStrength);
-
-    if (uEnableNoise > 0.5) {
-        vec2 noiseUV = vTexCoord;
-        noiseUV.x *= uAspectRatio;
-        vec2 grainUV = floor(noiseUV * uNoiseScale);
-        float noise = random(grainUV);
-        float noiseVisibility = smoothstep(0.4, 1.0, effectStrength);
-        finalColor += vec3((noise - 0.5) * uNoiseStrength * noiseVisibility);
+    if (uDotSize < 0.1) {
+        if (uGrayscale > 0.5) {
+            // Apply continuous Grayscale
+            float luma = dot(sharp, vec3(0.299, 0.587, 0.114));
+            halftoneOutput = vec3(luma);
+        } else {
+            // Apply continuous Color (No effect)
+            halftoneOutput = sharp;
+        }
+    } else {
+        // Normal Dot Generation
+        if (uGrayscale > 0.5) {
+            float luma = dot(sharp, vec3(0.299, 0.587, 0.114));
+            float kDot = halftoneChannel(vTexCoord, radians(45.0), 1.0 - luma, texSize, uDotSize);
+            halftoneOutput = vec3(1.0 - kDot);
+        } else {
+            vec3 cmy = 1.0 - sharp;
+            float cDot = halftoneChannel(vTexCoord, radians(15.0), cmy.r, texSize, uDotSize);
+            float mDot = halftoneChannel(vTexCoord, radians(75.0), cmy.g, texSize, uDotSize);
+            float yDot = halftoneChannel(vTexCoord, radians(0.0), cmy.b, texSize, uDotSize);
+            halftoneOutput = 1.0 - vec3(cDot, mDot, yDot);
+        }
     }
+
+    // Blend smoothly from Sharp to Halftone Pattern using effectStrength
+    vec3 finalColor = mix(sharp, halftoneOutput, effectStrength);
+
+    // Apply Dimness
+    finalColor = mix(finalColor, vec3(0.0), uDimLevel * effectStrength);
 
     fragColor = vec4(finalColor, 1.0);
 }

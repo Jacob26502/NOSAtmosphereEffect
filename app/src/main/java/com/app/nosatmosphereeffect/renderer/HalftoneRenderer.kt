@@ -37,6 +37,8 @@ class HalftoneRenderer(
     @Volatile var enableNoise: Boolean = false
     @Volatile var noiseScale: Float = 2000.0f
     @Volatile var noiseStrength: Float = 0.06f
+    @Volatile var dotSize: Float = 12.0f
+    @Volatile var grayscale: Boolean = false
 
     private var programId: Int = 0
     private var aspectRatio: Float = 1.0f
@@ -124,6 +126,8 @@ class HalftoneRenderer(
 
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uAspectRatio"), aspectRatio)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uBlurStrength"), blurStrength)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uDotSize"), dotSize)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uGrayscale"), if (grayscale) 1.0f else 0.0f)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uDimLevel"), dimLevel)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uEnableNoise"), if (enableNoise) 1.0f else 0.0f)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseScale"), noiseScale)

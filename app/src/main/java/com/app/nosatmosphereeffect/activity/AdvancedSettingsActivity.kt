@@ -1,5 +1,6 @@
 package com.app.nosatmosphereeffect.activity
 
+
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -12,15 +13,21 @@ import androidx.core.content.edit
 import com.app.nosatmosphereeffect.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.slider.Slider
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import java.io.File
 
 class AdvancedSettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_advanced_settings)
+
+        val halftoneContainer = findViewById<View>(R.id.halftoneSettingsContainer)
+        val sliderDotSize = findViewById<Slider>(R.id.sliderDotSize)
+        val switchGrayscale = findViewById<SwitchMaterial>(R.id.switchGrayscale)
+
 
         val layoutPoll = findViewById<TextInputLayout>(R.id.layoutPollInterval)
         val layoutDelay = findViewById<TextInputLayout>(R.id.layoutLockDelay)
@@ -34,6 +41,17 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val inputNoiseScale = findViewById<TextInputEditText>(R.id.inputNoiseScale)
         val inputNoiseStrength = findViewById<TextInputEditText>(R.id.inputNoiseStrength)
         val activeEffect = intent.getStringExtra("ACTIVE_EFFECT_TYPE") ?: "ORIGINAL"
+
+        if (activeEffect.contains("HALFTONE")) {
+            halftoneContainer.visibility = View.VISIBLE
+            switchNoise.visibility = View.GONE
+            switchNoise.isChecked = false
+            layoutNoise.visibility = View.GONE
+        } else {
+            halftoneContainer.visibility = View.GONE
+            switchNoise.visibility = View.VISIBLE
+        }
+
         val isSamsung = intent.getBooleanExtra("IS_SAMSUNG", false)
         val defaultDuration = if (activeEffect == "REVERSE") 1500L else if (activeEffect == "ORIGINAL") 2500L else 500L
         val defaultPoll = if (isSamsung) 30000L else 50L
@@ -64,6 +82,9 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
 
+        sliderDotSize.value = prefs.getFloat("halftone_dot_size", 12.0f)
+        switchGrayscale.isChecked = prefs.getBoolean("halftone_grayscale", false)
+
         // Load existing values or show defaults in placeholder
         val savedPoll = prefs.getLong("poll_interval", -1L)
         val savedDelay = prefs.getLong("lock_delay", -1L)
@@ -92,7 +113,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         layoutNoise.visibility = if (isNoiseEnabled) View.VISIBLE else View.GONE
 
         switchNoise.setOnCheckedChangeListener { _, isChecked ->
-            layoutNoise.visibility = if (isChecked) View.VISIBLE else View.GONE
+            layoutNoise.visibility = if (isChecked && !activeEffect.contains("HALFTONE")) View.VISIBLE else View.GONE
         }
 
         layoutPoll.setEndIconOnClickListener {
@@ -127,6 +148,19 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         }
 
 
+        sliderDotSize.addOnChangeListener { _, value, _ ->
+            prefs.edit().putFloat("halftone_dot_size", value).apply()
+            val intent = Intent("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+            sendBroadcast(intent)
+        }
+
+        switchGrayscale.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("halftone_grayscale", isChecked).apply()
+            val intent = Intent("com.app.nosatmosphereeffect.UPDATE_CONFIG")
+            sendBroadcast(intent)
+        }
+
+
         btnApply.setOnClickListener {
             val poll = inputPoll.text.toString().toLongOrNull() ?: defaultPoll
             val delay = inputDelay.text.toString().toLongOrNull() ?: defaultDelay
@@ -134,6 +168,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             val enableNoise = switchNoise.isChecked
             val noiseScale = inputNoiseScale.text.toString().toFloatOrNull() ?: 2000.0f
             val noiseStrength = inputNoiseStrength.text.toString().toFloatOrNull() ?: 0.06f
+            val dotSize = sliderDotSize.value
+            val isGrayscale = switchGrayscale.isChecked
 
             wpPrefs.edit().putLong("rotation_interval_minutes", selectedRotationValue).apply()
 
@@ -144,6 +180,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 putBoolean("enable_noise", enableNoise)
                 putFloat("noise_scale", noiseScale)
                 putFloat("noise_strength", noiseStrength)
+                putFloat("halftone_dot_size", dotSize)
+                putBoolean("halftone_grayscale", isGrayscale)
             }
             sendUpdateBroadcast()
         }
@@ -157,6 +195,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 remove("enable_noise")
                 remove("noise_scale")
                 remove("noise_strength")
+                remove("halftone_dot_size")
+                remove("halftone_grayscale")
             }
 
             // Visual reset
@@ -167,6 +207,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             layoutNoise.visibility = View.GONE
             inputNoiseScale.setText("2000.0")
             inputNoiseStrength.setText("0.06")
+            sliderDotSize.value = 12.0f
+            switchGrayscale.isChecked = false
 
             sendUpdateBroadcast()
         }

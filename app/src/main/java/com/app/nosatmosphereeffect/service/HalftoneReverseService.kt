@@ -286,6 +286,8 @@ class HalftoneReverseService : GLWallpaperService(){
             myRenderer?.noiseScale = prefs.getFloat("noise_scale", 2000.0f)
             myRenderer?.noiseStrength = prefs.getFloat("noise_strength", 0.06f)
             enableSystemColorUpdate = prefs.getBoolean("notify_system_colors", false)
+            myRenderer?.dotSize = prefs.getFloat("halftone_dot_size", 12.0f)
+            myRenderer?.grayscale = prefs.getBoolean("halftone_grayscale", false)
 
             val isSamsung = Build.MANUFACTURER.equals("samsung", ignoreCase = true)
             pollInterval = prefs.getLong("poll_interval", if (isSamsung) 30000L else 50L)
