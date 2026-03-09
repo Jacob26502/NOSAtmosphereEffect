@@ -148,19 +148,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         }
 
 
-        sliderDotSize.addOnChangeListener { _, value, _ ->
-            prefs.edit().putFloat("halftone_dot_size", value).apply()
-            val intent = Intent("com.app.nosatmosphereeffect.UPDATE_CONFIG")
-            sendBroadcast(intent)
-        }
-
-        switchGrayscale.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("halftone_grayscale", isChecked).apply()
-            val intent = Intent("com.app.nosatmosphereeffect.UPDATE_CONFIG")
-            sendBroadcast(intent)
-        }
-
-
         btnApply.setOnClickListener {
             val poll = inputPoll.text.toString().toLongOrNull() ?: defaultPoll
             val delay = inputDelay.text.toString().toLongOrNull() ?: defaultDelay
