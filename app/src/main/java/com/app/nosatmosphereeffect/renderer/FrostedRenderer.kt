@@ -158,7 +158,7 @@ class FrostedRenderer(private val context: Context) : GLSurfaceView.Renderer {
         tempTextureId = createEmptyTexture(bitmap.width, bitmap.height)
 
         // 4. Generate Blur for "Next" Set
-        nextSet.blurId = gpuBlur(nextSet.sharpId, bitmap.width, bitmap.height, 200f)
+        nextSet.blurId = gpuBlur(nextSet.sharpId, bitmap.width, bitmap.height, blurRadius)
 
         bitmap.recycle() // Done with raw bitmap
 
