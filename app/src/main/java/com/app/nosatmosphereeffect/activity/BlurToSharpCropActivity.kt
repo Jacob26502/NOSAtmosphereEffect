@@ -239,7 +239,7 @@ class BlurToSharpCropActivity : AppCompatActivity() {
         val file = File(filesDir, "wallpaper.jpg")
         if (file.exists()) file.delete()
         val out = FileOutputStream(file)
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
         out.flush()
         out.close()
     }

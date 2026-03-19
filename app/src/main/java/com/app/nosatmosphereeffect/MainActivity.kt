@@ -357,7 +357,7 @@ class MainActivity : AppCompatActivity() {
 
         val effectId = getActiveEffectType() ?: "ORIGINAL"
         val intent = Intent(this, com.app.nosatmosphereeffect.activity.PlaylistEditorActivity::class.java)
-        intent.putParcelableArrayListExtra("IMAGE_URIS", uris)
+        intent.putExtra("EDIT_EXISTING", true)
         intent.putExtra("EFFECT_ID", effectId)
         startActivity(intent)
     }
