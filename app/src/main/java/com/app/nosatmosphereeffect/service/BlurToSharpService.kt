@@ -378,6 +378,9 @@ class BlurToSharpService : GLWallpaperService() {
 
             enableSystemColorUpdate = prefs.getBoolean("notify_system_colors", false)
 
+            myRenderer?.blobSaturation = prefs.getFloat("blob_saturation", 1.0f)
+            myRenderer?.blobContrast = prefs.getFloat("blob_contrast", 1.0f)
+
             myRenderer?.enableNoise = noise
             myRenderer?.noiseScale = scale
             myRenderer?.noiseStrength = strength

@@ -21,6 +21,19 @@ uniform float uEnableNoise;
 uniform float uNoiseScale;
 uniform float uNoiseStrength;
 
+uniform float uSaturation;
+uniform float uContrast;
+
+vec3 adjustColor(vec3 color) {
+    // Apply Contrast
+    color = (color - 0.5) * max(uContrast, 0.0) + 0.5;
+    // Apply Saturation
+    float luminance = dot(color, vec3(0.299, 0.587, 0.114));
+    color = mix(vec3(luminance), color, max(uSaturation, 0.0));
+    // Keep it in bounds
+    return clamp(color, 0.0, 1.0);
+}
+
 float random(vec2 co) {
     return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
 }
@@ -43,7 +56,7 @@ void main() {
 
         // Power 2.0 creates a very wide, muddy gradient that fills the screen
         float w = uBlobSizes[i] / (pow(dist, 2.0) + 0.05);
-        cloudSum += uBlobColors[i] * w;
+        cloudSum += adjustColor(uBlobColors[i]) * w;
         cloudWeight += w;
     }
 
@@ -97,7 +110,7 @@ void main() {
 
             // Soft Additive Mixing (The look you liked)
             if (alpha > 0.0) {
-                finalColor = mix(finalColor, uBlobColors[i], alpha);
+                finalColor = mix(finalColor, adjustColor(uBlobColors[i]), alpha);
             }
         }
     }
