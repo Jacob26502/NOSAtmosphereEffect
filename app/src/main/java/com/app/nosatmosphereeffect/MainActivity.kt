@@ -312,14 +312,54 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Blur Strength Updated!", Toast.LENGTH_SHORT).show()
     }
     private fun showImageSelectionDialog() {
-        val options = arrayOf("Single Image", "Multiple Images (Playlist)")
+        // Dynamically change options based on whether a playlist already exists
+        val options = if (isPlaylistModeActive) {
+            arrayOf("Single Image", "Create New Playlist", "Edit Existing Playlist")
+        } else {
+            arrayOf("Single Image", "Multiple Images (Playlist)")
+        }
+
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle("Select Wallpaper Mode")
             .setItems(options) { _, which ->
-                if (which == 0) pickSingleImage.launch("image/*")
-                else pickMultipleImages.launch("image/*")
+                if (isPlaylistModeActive) {
+                    when (which) {
+                        0 -> pickSingleImage.launch("image/*")
+                        1 -> pickMultipleImages.launch("image/*") // Create New
+                        2 -> launchEditExistingPlaylist()         // Edit Existing
+                    }
+                } else {
+                    when (which) {
+                        0 -> pickSingleImage.launch("image/*")
+                        1 -> pickMultipleImages.launch("image/*")
+                    }
+                }
             }
             .show()
+    }
+
+    private fun launchEditExistingPlaylist() {
+        val playlistDir = File(filesDir, "playlist")
+        if (!playlistDir.exists()) return
+
+        // Fetch all existing playlist images
+        val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+        if (files.isNullOrEmpty()) return
+
+        // Sort files correctly (wallpaper_0, wallpaper_1, etc.)
+        files.sortBy { it.nameWithoutExtension.substringAfter('_').toIntOrNull() ?: 0 }
+
+        // Convert to standard file URIs that PlaylistEditorActivity can read
+        val uris = ArrayList<android.net.Uri>()
+        files.forEach { file ->
+            uris.add(android.net.Uri.parse("file://${file.absolutePath}"))
+        }
+
+        val effectId = getActiveEffectType() ?: "ORIGINAL"
+        val intent = Intent(this, com.app.nosatmosphereeffect.activity.PlaylistEditorActivity::class.java)
+        intent.putExtra("EDIT_EXISTING", true)
+        intent.putExtra("EFFECT_ID", effectId)
+        startActivity(intent)
     }
 
     private fun launchCropActivity(uri: android.net.Uri) {

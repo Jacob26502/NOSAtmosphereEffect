@@ -19,12 +19,11 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.exifinterface.media.ExifInterface
-import com.app.nosatmosphereeffect.MainActivity
 import com.app.nosatmosphereeffect.R
 import com.app.nosatmosphereeffect.helper.TouchImageView
 import com.app.nosatmosphereeffect.service.BlurToSharpService
 import com.app.nosatmosphereeffect.service.FrostedReverseService
-import com.app.nosatmosphereeffect.service.HalftoneService
+import com.app.nosatmosphereeffect.service.HalftoneReverseService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.FileOutputStream
@@ -240,7 +239,7 @@ class BlurToSharpCropActivity : AppCompatActivity() {
         val file = File(filesDir, "wallpaper.jpg")
         if (file.exists()) file.delete()
         val out = FileOutputStream(file)
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
         out.flush()
         out.close()
     }
@@ -250,7 +249,7 @@ class BlurToSharpCropActivity : AppCompatActivity() {
             val serviceClass = if (effectId == "FROSTED_REVERSE") {
                 FrostedReverseService::class.java
             } else if (effectId == "HALFTONE_REVERSE"){
-                HalftoneService::class.java
+                HalftoneReverseService::class.java
             } else {
                 BlurToSharpService::class.java
             }
