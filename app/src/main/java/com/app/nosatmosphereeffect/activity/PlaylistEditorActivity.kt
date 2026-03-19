@@ -192,10 +192,11 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
         Thread {
             try {
-                // 1. CLEANUP PREVIOUS PLAYLIST DATA
-                val playlistDir = File(filesDir, "playlist")
-                if (playlistDir.exists()) playlistDir.deleteRecursively()
-                playlistDir.mkdirs()
+
+                // 1. USE A TEMPORARY FOLDER INSTEAD OF DELETING THE ACTIVE ONE YET
+                val tempDir = File(filesDir, "playlist_temp")
+                if (tempDir.exists()) tempDir.deleteRecursively()
+                tempDir.mkdirs()
 
                 // 2. CLEANUP STALE SINGLE-IMAGE DATA (Important!)
                 val nextWallpaper = File(filesDir, "next_wallpaper.jpg")
@@ -203,7 +204,7 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
                 // 3. Process each item
                 playlistItems.forEachIndexed { index, item ->
-                    val destFile = File(playlistDir, "wallpaper_$index.jpg")
+                    val destFile = File(tempDir, "wallpaper_$index.jpg")
 
                     if (item.isEdited && item.editedFilePath != null) {
                         File(item.editedFilePath!!).copyTo(destFile, overwrite = true)
@@ -217,14 +218,19 @@ class PlaylistEditorActivity : AppCompatActivity() {
                     }
                 }
 
-                // 4. Set Main Wallpaper
+                // 4. SWAP THE FOLDERS SAFELY
+                val playlistDir = File(filesDir, "playlist")
+                if (playlistDir.exists()) playlistDir.deleteRecursively()
+                tempDir.renameTo(playlistDir)
+
+                // 5. Set Main Wallpaper
                 val firstFile = File(playlistDir, "wallpaper_0.jpg")
                 val activeWallpaper = File(filesDir, "wallpaper.jpg")
                 if (firstFile.exists()) {
                     firstFile.copyTo(activeWallpaper, overwrite = true)
                 }
 
-                // 5. RESET ALL PREFERENCES TO ENSURE FRESH START
+                // 6. RESET ALL PREFERENCES TO ENSURE FRESH START
                 val wallpaperPrefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
                 wallpaperPrefs.edit().clear().apply()
                 getSharedPreferences("app_prefs", Context.MODE_PRIVATE).edit().clear().apply()
