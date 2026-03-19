@@ -1,6 +1,14 @@
 # Atmo Engine
 
 **Atmo Engine** is an Android application designed to replicate the distinctive "Atmosphere" transition effect found in Nothing OS.
+
+## 📥 Download
+Atmo Engine is available to download from the Orion Store and F-Droid.
+
+<a href="https://f-droid.org/packages/com.saad_khan_rind.atmosphere_effect/">
+<img alt="Get it on F-Droid" src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="80">
+</a>
+
 ## ⚠️ Device Support & Disclaimer
 
 **Current Testing Status:**
@@ -29,10 +37,9 @@ After selecting an effect, you will be prompted to choose your wallpaper mode:
 
 * **Single Image:** Standard mode. Pick one image, crop it, and apply.
 
-* **Multiple Images (Playlist):** Select multiple images from your gallery to create a Wallpaper Playlist.
-* You can simply apply the play list as it or adjust & crop any image from the playlist you want.
-* Once finished, the app will automatically rotate through these wallpapers based on your settings.
+* **Multiple Images (Playlist):** Select multiple images from your gallery to create a Wallpaper Playlist. You can simply apply the play list as it or adjust & crop any image from the playlist you want. Once finished, the app will automatically rotate through these wallpapers based on your settings.
 
+* **Edit Existing Playlist:** If you already have a playlist running, this option loads your currently saved wallpapers (including your exact zoom and crop settings). You can easily remove old images, add new ones from your gallery, or tweak existing crops without having to start from scratch.
 
 ### 3\. Application & Activation
 

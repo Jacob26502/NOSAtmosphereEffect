@@ -33,6 +33,8 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.max
 import kotlin.math.min
+import org.json.JSONArray
+import org.json.JSONObject
 
 class PlaylistEditorActivity : AppCompatActivity() {
 
@@ -84,10 +86,15 @@ class PlaylistEditorActivity : AppCompatActivity() {
         setContentView(R.layout.activity_playlist_editor)
 
         effectId = intent.getStringExtra("EFFECT_ID") ?: "ORIGINAL"
-        val uris = intent.getParcelableArrayListExtra("IMAGE_URIS", Uri::class.java)
 
-        if (uris != null) {
-            uris.forEach { playlistItems.add(PlaylistItem(it)) }
+        val isEditExisting = intent.getBooleanExtra("EDIT_EXISTING", false)
+        if (isEditExisting) {
+            loadExistingPlaylist()
+        } else {
+            val uris = intent.getParcelableArrayListExtra("IMAGE_URIS", Uri::class.java)
+            if (uris != null) {
+                uris.forEach { playlistItems.add(PlaylistItem(it)) }
+            }
         }
 
         btnApplyAll = findViewById(R.id.btnApplyAll)
@@ -192,39 +199,84 @@ class PlaylistEditorActivity : AppCompatActivity() {
 
         Thread {
             try {
-                // 1. CLEANUP PREVIOUS PLAYLIST DATA
-                val playlistDir = File(filesDir, "playlist")
-                if (playlistDir.exists()) playlistDir.deleteRecursively()
-                playlistDir.mkdirs()
+
+                // 1. USE A TEMPORARY FOLDER INSTEAD OF DELETING THE ACTIVE ONE YET
+                val tempDir = File(filesDir, "playlist_temp")
+                if (tempDir.exists()) tempDir.deleteRecursively()
+                tempDir.mkdirs()
+
+                val tempOriginalsDir = File(filesDir, "playlist_originals_temp")
+                if (tempOriginalsDir.exists()) tempOriginalsDir.deleteRecursively()
+                tempOriginalsDir.mkdirs()
 
                 // 2. CLEANUP STALE SINGLE-IMAGE DATA (Important!)
                 val nextWallpaper = File(filesDir, "next_wallpaper.jpg")
                 if (nextWallpaper.exists()) nextWallpaper.delete()
 
+                val metaArray = JSONArray()
+
                 // 3. Process each item
                 playlistItems.forEachIndexed { index, item ->
-                    val destFile = File(playlistDir, "wallpaper_$index.jpg")
+                    val destFile = File(tempDir, "wallpaper_$index.jpg")
+                    val origFile = File(tempOriginalsDir, "original_$index.jpg")
+
+
+                    try {
+                        contentResolver.openInputStream(item.originalUri)?.use { input ->
+                            FileOutputStream(origFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
 
                     if (item.isEdited && item.editedFilePath != null) {
-                        File(item.editedFilePath!!).copyTo(destFile, overwrite = true)
+                        val srcEdited = File(item.editedFilePath!!)
+                        if (srcEdited.exists() && srcEdited.absolutePath != destFile.absolutePath) {
+                            srcEdited.copyTo(destFile, overwrite = true)
+                        }
                     } else {
                         val bitmap = decodeCenterCropBitmap(item.originalUri)
                         if (bitmap != null) {
                             FileOutputStream(destFile).use { out ->
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
                             }
                         }
                     }
+
+                    val metaObj = JSONObject()
+                    metaObj.put("original", "original_$index.jpg")
+                    metaObj.put("isEdited", item.isEdited)
+                    if (item.matrixState != null) {
+                        val matrixJson = JSONArray()
+                        item.matrixState!!.forEach { matrixJson.put(it.toDouble()) }
+                        metaObj.put("matrix", matrixJson)
+                    }
+                    metaArray.put(metaObj)
+
+
                 }
 
-                // 4. Set Main Wallpaper
+                File(tempDir, "metadata.json").writeText(metaArray.toString())
+
+                // 4. SWAP THE FOLDERS SAFELY
+                val playlistDir = File(filesDir, "playlist")
+                if (playlistDir.exists()) playlistDir.deleteRecursively()
+                tempDir.renameTo(playlistDir)
+
+                val originalsDir = File(filesDir, "playlist_originals")
+                if (originalsDir.exists()) originalsDir.deleteRecursively()
+                tempOriginalsDir.renameTo(originalsDir)
+
+                // 5. Set Main Wallpaper
                 val firstFile = File(playlistDir, "wallpaper_0.jpg")
                 val activeWallpaper = File(filesDir, "wallpaper.jpg")
                 if (firstFile.exists()) {
                     firstFile.copyTo(activeWallpaper, overwrite = true)
                 }
 
-                // 5. RESET ALL PREFERENCES TO ENSURE FRESH START
+                // 6. RESET ALL PREFERENCES TO ENSURE FRESH START
                 val wallpaperPrefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
                 wallpaperPrefs.edit().clear().apply()
                 getSharedPreferences("app_prefs", Context.MODE_PRIVATE).edit().clear().apply()
@@ -257,9 +309,6 @@ class PlaylistEditorActivity : AppCompatActivity() {
                     val intent = Intent("com.app.nosatmosphereeffect.RELOAD_WALLPAPER")
                     intent.setPackage(packageName)
                     sendBroadcast(intent)
-
-                    Toast.makeText(this, "Setup complete! Now lock and unlock the screen to activate.", Toast.LENGTH_LONG).show()
-
                     // Proceed to "Reapply" by showing the preview screen
                     activateService()
                 }
@@ -373,6 +422,54 @@ class PlaylistEditorActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun loadExistingPlaylist() {
+        val playlistDir = File(filesDir, "playlist")
+        val originalsDir = File(filesDir, "playlist_originals")
+        val metaFile = File(playlistDir, "metadata.json")
+
+        if (metaFile.exists()) {
+            try {
+                val jsonStr = metaFile.readText()
+                val jsonArray = JSONArray(jsonStr)
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    val origName = obj.getString("original")
+                    val isEdited = obj.getBoolean("isEdited")
+
+                    val origFile = File(originalsDir, origName)
+                    val originalUri = Uri.parse("file://${origFile.absolutePath}")
+
+                    var editedPath: String? = null
+                    if (isEdited) {
+                        editedPath = File(playlistDir, "wallpaper_$i.jpg").absolutePath
+                    }
+
+                    var matrixState: FloatArray? = null
+                    if (obj.has("matrix")) {
+                        val matrixArray = obj.getJSONArray("matrix")
+                        matrixState = FloatArray(matrixArray.length())
+                        for (j in 0 until matrixArray.length()) {
+                            matrixState[j] = matrixArray.getDouble(j).toFloat()
+                        }
+                    }
+
+                    playlistItems.add(PlaylistItem(originalUri, isEdited, editedPath, matrixState))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else {
+            // Fallback for older playlists created before this update
+            val files = playlistDir.listFiles { _, name -> name.endsWith(".jpg") }
+            if (!files.isNullOrEmpty()) {
+                files.sortBy { it.nameWithoutExtension.substringAfter('_').toIntOrNull() ?: 0 }
+                files.forEach { file ->
+                    playlistItems.add(PlaylistItem(Uri.parse("file://${file.absolutePath}")))
+                }
+            }
+        }
     }
 
     private fun applyFromDialog(){
