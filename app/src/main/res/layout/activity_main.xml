@@ -71,7 +71,7 @@
                 android:layout_height="wrap_content"
                 android:minHeight="56dp"
                 android:layout_marginEnd="8dp"
-                android:text="Update Effect"
+                android:text="Change Effect"
                 android:textAlignment="center"
                 app:icon="@drawable/ic_deblur"
                 app:iconGravity="top"/>
@@ -84,7 +84,7 @@
                 android:layout_height="wrap_content"
                 android:minHeight="56dp"
                 android:layout_marginStart="8dp"
-                android:text="Update Image"
+                android:text="Change Image"
                 android:textAlignment="center"
                 app:icon="@drawable/ic_wallpaper"
                 app:iconGravity="top"/>
