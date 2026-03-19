@@ -1,6 +1,14 @@
 # Atmo Engine
 
 **Atmo Engine** is an Android application designed to replicate the distinctive "Atmosphere" transition effect found in Nothing OS.
+
+## 📥 Download
+Atmo Engine is available to download from the Orion Store and F-Droid.
+
+<a href="https://f-droid.org/packages/com.saad_khan_rind.atmosphere_effect/">
+<img alt="Get it on F-Droid" src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="80">
+</a>
+
 ## ⚠️ Device Support & Disclaimer
 
 **Current Testing Status:**
