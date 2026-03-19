@@ -52,6 +52,9 @@ class BlurToSharpRenderer(private val context: Context) : GLSurfaceView.Renderer
     @Volatile var noiseScale: Float = 2000.0f
     @Volatile var noiseStrength: Float = 0.06f
 
+    @Volatile var blobSaturation: Float = 1.0f
+    @Volatile var blobContrast: Float = 1.0f
+
     private var programId: Int = 0
     private var blurProgramId: Int = 0
     private var tempTextureId: Int = 0
@@ -349,6 +352,8 @@ class BlurToSharpRenderer(private val context: Context) : GLSurfaceView.Renderer
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uEnableNoise"), if (enableNoise) 1.0f else 0.0f)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseScale"), noiseScale)
         GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uNoiseStrength"), noiseStrength)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uSaturation"), blobSaturation)
+        GLES30.glUniform1f(GLES30.glGetUniformLocation(programId, "uContrast"), blobContrast)
 
         // BIND CURRENT SET
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)

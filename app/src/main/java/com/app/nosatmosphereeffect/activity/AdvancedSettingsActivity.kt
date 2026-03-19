@@ -51,6 +51,18 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             halftoneContainer.visibility = View.GONE
             switchNoise.visibility = View.VISIBLE
         }
+        val blobColorContainer = findViewById<LinearLayout>(R.id.blobColorSettingsContainer)
+        val sliderSat = findViewById<Slider>(R.id.sliderSaturation)
+        val sliderCon = findViewById<Slider>(R.id.sliderContrast)
+
+        // Show ONLY for original and reverse original
+        if (activeEffect == "ORIGINAL" || activeEffect == "REVERSE") {
+            blobColorContainer.visibility = View.VISIBLE
+        } else {
+            blobColorContainer.visibility = View.GONE
+        }
+
+
 
         val isSamsung = intent.getBooleanExtra("IS_SAMSUNG", false)
         val defaultDuration = if (activeEffect == "REVERSE") 1500L else if (activeEffect == "ORIGINAL") 2500L else 500L
@@ -89,6 +101,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val savedPoll = prefs.getLong("poll_interval", -1L)
         val savedDelay = prefs.getLong("lock_delay", -1L)
         val savedDuration = prefs.getLong("anim_duration", -1L)
+        sliderSat.value = prefs.getFloat("blob_saturation", 1.0f)
+        sliderCon.value = prefs.getFloat("blob_contrast", 1.0f)
 
         inputPoll.setText(if (savedPoll != -1L) savedPoll.toString() else defaultPoll.toString())
         inputDelay.setText(if (savedDelay != -1L) savedDelay.toString() else defaultDelay.toString())
@@ -169,6 +183,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 putFloat("noise_strength", noiseStrength)
                 putFloat("halftone_dot_size", dotSize)
                 putBoolean("halftone_grayscale", isGrayscale)
+                putFloat("blob_saturation", sliderSat.value)
+                putFloat("blob_contrast", sliderCon.value)
             }
             sendUpdateBroadcast()
         }
@@ -184,6 +200,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 remove("noise_strength")
                 remove("halftone_dot_size")
                 remove("halftone_grayscale")
+                remove("blob_saturation")
+                remove("blob_contrast")
             }
 
             // Visual reset
@@ -196,6 +214,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             inputNoiseStrength.setText("0.06")
             sliderDotSize.value = 12.0f
             switchGrayscale.isChecked = false
+            sliderSat.value = 1.0f
+            sliderCon.value = 1.0f
 
             sendUpdateBroadcast()
         }
