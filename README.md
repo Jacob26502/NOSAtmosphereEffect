@@ -37,10 +37,9 @@ After selecting an effect, you will be prompted to choose your wallpaper mode:
 
 * **Single Image:** Standard mode. Pick one image, crop it, and apply.
 
-* **Multiple Images (Playlist):** Select multiple images from your gallery to create a Wallpaper Playlist.
-* You can simply apply the play list as it or adjust & crop any image from the playlist you want.
-* Once finished, the app will automatically rotate through these wallpapers based on your settings.
+* **Multiple Images (Playlist):** Select multiple images from your gallery to create a Wallpaper Playlist. You can simply apply the play list as it or adjust & crop any image from the playlist you want. Once finished, the app will automatically rotate through these wallpapers based on your settings.
 
+* **Edit Existing Playlist:** If you already have a playlist running, this option loads your currently saved wallpapers (including your exact zoom and crop settings). You can easily remove old images, add new ones from your gallery, or tweak existing crops without having to start from scratch.
 
 ### 3\. Application & Activation
 
